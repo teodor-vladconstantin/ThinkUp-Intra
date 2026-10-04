@@ -137,7 +137,7 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('vp_pn', 'tasks: read (CD sees all)',   '4', pg_temp.cnt($q$select 1 from tasks where title like 'RLS %'$q$)),
   ('vp_pn', 'meetings: read (CD + PN)',    '2', pg_temp.cnt($q$select 1 from meetings where title like 'RLS %'$q$)),
   ('vp_pn', 'schools: read',               '1', pg_temp.cnt($q$select 1 from schools where name like 'RLS %'$q$)),
-  ('vp_pn', 'ambassador_contacts: read',   '1', pg_temp.cnt($q$select 1 from ambassador_contacts$q$));
+  ('vp_pn', 'ambassador_contacts: read',   '1', pg_temp.cnt($q$select 1 from ambassador_contacts where ambassador_id = 900001$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('vp_pn', 'schools: create', 'ok', pg_temp.try($q$insert into schools (name, county_code) values ('W school', 'CJ')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
