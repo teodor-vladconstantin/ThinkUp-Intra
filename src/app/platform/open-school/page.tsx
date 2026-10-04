@@ -38,7 +38,7 @@ export default async function OpenSchoolPage(props: PageProps<"/platform/open-sc
     <Link
       href={`/platform/open-school?${new URLSearchParams({ ...(q ? { q } : {}), ...params })}`}
       aria-current={active ? "page" : undefined}
-      className={`rounded-full border px-3 py-1 text-sm ${active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary"}`}
+      className={`rounded-full border px-3 py-1 text-sm max-md:py-2 ${active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary"}`}
     >
       {label}
     </Link>

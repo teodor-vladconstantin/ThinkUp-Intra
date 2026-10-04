@@ -69,7 +69,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
 
       {done.length > 0 && (
         <details className="rounded-xl border bg-card p-4">
-          <summary className="cursor-pointer text-sm font-medium">Finalizate ({done.length})</summary>
+          <summary className="cursor-pointer py-1 text-sm font-medium max-md:py-2">Finalizate ({done.length})</summary>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {done.map((t) => (
               <TaskCard key={t.id} task={t} viewer={profile} />
@@ -87,7 +87,7 @@ function FilterLink({ href, active, children }: { href: string; active: boolean;
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "rounded-full border px-3 py-1",
+        "rounded-full border px-3 py-1 max-md:py-2",
         active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary",
       )}
     >

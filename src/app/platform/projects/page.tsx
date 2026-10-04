@@ -46,7 +46,7 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`rounded-full border px-3 py-1 text-sm ${active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary"}`}
+      className={`rounded-full border px-3 py-1 text-sm max-md:py-2 ${active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary"}`}
     >
       {label}
     </Link>

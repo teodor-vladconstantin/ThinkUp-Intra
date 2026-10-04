@@ -10,7 +10,7 @@ export function AmbassadorContactForm({ id, email, phone }: { id: number; email:
 
   return (
     <details className="text-xs">
-      <summary className="cursor-pointer text-primary">Editează contactul</summary>
+      <summary className="cursor-pointer py-1 text-primary max-md:py-2.5">Editează contactul</summary>
       <form action={action} className="mt-2 grid gap-2">
         <input type="hidden" name="id" value={id} />
         <Input name="email" type="email" required maxLength={200} defaultValue={email ?? ""} placeholder="Email de contact" aria-label="Email de contact" autoComplete="off" />

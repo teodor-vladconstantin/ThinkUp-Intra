@@ -121,7 +121,7 @@ function Pill({ href, active, children }: { href: string; active: boolean; child
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "rounded-full border px-3 py-1",
+        "rounded-full border px-3 py-1 max-md:py-2",
         active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary",
       )}
     >

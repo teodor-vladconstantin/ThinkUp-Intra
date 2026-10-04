@@ -124,3 +124,12 @@
     @apply text-xs font-medium tracking-widest uppercase;
   }
 }
+
+/* Phones: fields at 16px, otherwise iOS zooms the page in on focus and never zooms back out.
+   Unlayered on purpose so it wins over the text-sm utilities. */
+@media (max-width: 767px) {
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]) {
+    font-size: 16px;
+  }
+}

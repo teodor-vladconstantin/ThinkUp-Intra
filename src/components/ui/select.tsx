@@ -81,7 +81,7 @@ function Select({
             "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
             "data-[placeholder]:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60",
             "data-[state=open]:border-ring",
-            size === "sm" ? "h-8" : "h-9",
+            size === "sm" ? "h-8 max-md:h-9" : "h-9 max-md:h-10",
             className
           )}
         >
@@ -105,7 +105,7 @@ function Select({
                   key={o.value || EMPTY}
                   value={o.value === "" ? EMPTY : o.value}
                   disabled={o.disabled}
-                  className="relative flex cursor-pointer select-none items-center rounded-md py-1.5 pr-8 pl-2.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+                  className="relative flex cursor-pointer select-none items-center rounded-md py-2.5 pr-8 pl-2.5 text-sm outline-none md:py-1.5 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
                 >
                   <SelectPrimitive.ItemText>{o.label}</SelectPrimitive.ItemText>
                   <SelectPrimitive.ItemIndicator className="absolute right-2 flex items-center">

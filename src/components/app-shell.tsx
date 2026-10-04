@@ -19,7 +19,7 @@ export function AppShell({ profile, banner, children }: { profile: Profile; bann
           canAccessPlatform: profile.canAccessPlatform,
         }}
       />
-      <SidebarInset className="bg-workspace">
+      <SidebarInset className="min-w-0 bg-workspace">
         {/* Dark, glassy header that stays on top while the work area scrolls */}
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-sidebar-border bg-sidebar/95 px-4 text-sidebar-foreground backdrop-blur-md">
           <SidebarTrigger />
@@ -28,7 +28,7 @@ export function AppShell({ profile, banner, children }: { profile: Profile; bann
           </div>
         </header>
         {banner}
-        <div className="mx-auto w-full max-w-6xl p-4 md:p-8">{children}</div>
+        <div className="mx-auto w-full min-w-0 max-w-6xl p-4 md:p-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

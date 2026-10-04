@@ -188,7 +188,7 @@ function DatePicker({ name, value: controlled, defaultValue = "", onValueChange,
                     tabIndex={c.iso === focus ? 0 : -1}
                     onClick={() => commit(c.iso)}
                     className={cn(
-                      "mx-auto flex size-8 items-center justify-center rounded-md text-sm outline-none transition-colors",
+                      "mx-auto flex size-9 items-center justify-center rounded-md text-sm outline-none transition-colors md:size-8",
                       "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
                       !c.inMonth && "text-muted-foreground/50",
                       c.iso === today && !selected && "border border-primary/60 font-semibold",
@@ -202,11 +202,11 @@ function DatePicker({ name, value: controlled, defaultValue = "", onValueChange,
             </div>
             <div className="mt-2 flex items-center justify-between border-t pt-2 text-sm">
               {required ? <span /> : (
-                <button type="button" className="rounded px-2 py-1 text-muted-foreground hover:bg-accent" onClick={() => commit("")}>
+                <button type="button" className="rounded px-3 py-2 text-muted-foreground hover:bg-accent md:px-2 md:py-1" onClick={() => commit("")}>
                   Șterge
                 </button>
               )}
-              <button type="button" className="rounded px-2 py-1 font-medium text-primary hover:bg-accent" onClick={() => commit(today)}>
+              <button type="button" className="rounded px-3 py-2 font-medium text-primary hover:bg-accent md:px-2 md:py-1" onClick={() => commit(today)}>
                 Azi
               </button>
             </div>
@@ -223,7 +223,7 @@ function NavButton({ label, onClick, children }: { label: string; onClick: () =>
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring md:size-7"
     >
       {children}
     </button>

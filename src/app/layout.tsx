@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { roRO } from "@clerk/localizations";
@@ -20,6 +20,13 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "ThinkUp Intranet",
   description: "Intranetul ThinkUp Academy",
+};
+
+// Phones: real device width, and the browser bar takes the dark purple of the app header.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1A0B2E",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

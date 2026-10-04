@@ -19,7 +19,7 @@ export function StatusSelect({ taskId, status }: { taskId: string; status: TaskS
         size="sm"
         // the hidden input updates on the next render; submit after it
         onValueChange={() => setTimeout(() => form.current?.requestSubmit(), 0)}
-        className="h-7 w-auto rounded-full px-2.5 text-xs"
+        className="h-7 w-auto rounded-full px-2.5 text-xs max-md:h-9"
         options={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
       />
     </form>

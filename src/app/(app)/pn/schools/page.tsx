@@ -54,7 +54,7 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
 
       {isPnMember(profile) && (
         <details className="rounded-xl border bg-card p-4">
-          <summary className="cursor-pointer text-sm font-medium">Adaugă un liceu</summary>
+          <summary className="cursor-pointer py-1 text-sm font-medium max-md:py-2">Adaugă un liceu</summary>
           <div className="mt-4">
             <SchoolForm action={createSchool} counties={counties ?? []} defaultCounty={county} />
           </div>
