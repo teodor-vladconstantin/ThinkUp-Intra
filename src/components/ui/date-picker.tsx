@@ -128,7 +128,7 @@ function DatePicker({ name, value: controlled, defaultValue = "", onValueChange,
           value={value}
           required
           tabIndex={-1}
-          readOnly
+          onChange={() => {}} // not readOnly: read-only inputs skip the browser's required check
           aria-hidden
           disabled={disabled}
           className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
