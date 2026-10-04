@@ -5,7 +5,7 @@ import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import { createDocument, type FormState } from "@/app/(app)/documents/actions";
 import { VISIBILITIES, VISIBILITY_LABELS, type Visibility } from "@/lib/documents";
 
@@ -31,24 +31,23 @@ export function DocumentForm({ departments, defaultDepartmentId }: { departments
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="doc-visibility">Cine vede linkul</Label>
-          <select id="doc-visibility" name="visibility" className={selectClass} value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)}>
-            {VISIBILITIES.map((v) => (
-              <option key={v} value={v}>
-                {VISIBILITY_LABELS[v]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="doc-visibility"
+            name="visibility"
+            value={visibility}
+            onValueChange={(v) => setVisibility(v as Visibility)}
+            options={VISIBILITIES.map((v) => ({ value: v, label: VISIBILITY_LABELS[v] }))}
+          />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="doc-dept">Departament</Label>
-          <select id="doc-dept" name="departmentId" className={selectClass} defaultValue={defaultDepartmentId ?? ""} required={visibility === "department"}>
-            <option value="">{visibility === "department" ? "Alege…" : "—"}</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="doc-dept"
+            name="departmentId"
+            defaultValue={defaultDepartmentId != null ? String(defaultDepartmentId) : ""}
+            placeholder={visibility === "department" ? "Alege…" : "—"}
+            options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+          />
         </div>
       </div>
 

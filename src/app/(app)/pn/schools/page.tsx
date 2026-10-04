@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SchoolForm } from "@/components/pn/school-form";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireProfile } from "@/lib/auth";
@@ -35,22 +35,20 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
 
       <form className="flex flex-wrap items-center gap-2" role="search">
         <Input name="q" defaultValue={q} placeholder="Caută liceul" aria-label="Caută liceul" className="max-w-xs" />
-        <select name="county" defaultValue={county} aria-label="Județ" className={`${selectClass} w-auto`}>
-          <option value="">Toate județele</option>
-          {(counties ?? []).map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status} aria-label="Status" className={`${selectClass} w-auto`}>
-          <option value="">Orice status</option>
-          {SCHOOL_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {SCHOOL_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="county"
+          defaultValue={county}
+          aria-label="Județ"
+          className="w-auto min-w-44"
+          options={[{ value: "", label: "Toate județele" }, ...(counties ?? []).map((c) => ({ value: c.code, label: c.name }))]}
+        />
+        <Select
+          name="status"
+          defaultValue={status}
+          aria-label="Status"
+          className="w-auto min-w-40"
+          options={[{ value: "", label: "Orice status" }, ...SCHOOL_STATUSES.map((s) => ({ value: s, label: SCHOOL_STATUS_LABELS[s] }))]}
+        />
         <Button type="submit" variant="outline">Filtrează</Button>
       </form>
 

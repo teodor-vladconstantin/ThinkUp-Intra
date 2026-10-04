@@ -4,13 +4,10 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { needsDepartment, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { createInvitation, type InviteState } from "./actions";
 
-// Native <select> on purpose: it posts with the form, works without extra JS state
-// and is accessible out of the box.
-const selectClass =
-  "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function InviteForm({
   roles,
@@ -33,13 +30,13 @@ export function InviteForm({
 
       <div className="grid gap-1.5">
         <Label htmlFor="role">Rol</Label>
-        <select id="role" name="role" className={selectClass} value={role} onChange={(e) => setRole(e.target.value as AppRole)}>
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {ROLE_LABELS[r]}
-            </option>
-          ))}
-        </select>
+        <Select
+          id="role"
+          name="role"
+          value={role}
+          onValueChange={(v) => setRole(v as AppRole)}
+          options={roles.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+        />
       </div>
 
       <div className="grid gap-1.5">
@@ -50,14 +47,14 @@ export function InviteForm({
             <Input disabled value={departments.find((d) => d.id === fixedDepartmentId)?.name ?? ""} />
           </>
         ) : (
-          <select id="departmentId" name="departmentId" className={selectClass} disabled={!needsDepartment(role)} defaultValue="">
-            <option value="">{needsDepartment(role) ? "Alege…" : "—"}</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            key={needsDepartment(role) ? "dept" : "no-dept"}
+            id="departmentId"
+            name="departmentId"
+            disabled={!needsDepartment(role)}
+            placeholder={needsDepartment(role) ? "Alege…" : "—"}
+            options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+          />
         )}
       </div>
 

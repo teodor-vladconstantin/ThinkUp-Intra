@@ -4,6 +4,7 @@ import { ActionForm, fieldClass } from "@/components/platform/controls";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
 import { createProject } from "../actions";
@@ -71,14 +72,11 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
             <Input name="name" required maxLength={150} placeholder="Numele proiectului" aria-label="Numele proiectului" />
             <textarea name="description" rows={3} maxLength={5000} placeholder="Descriere (opțional)" aria-label="Descriere" className={fieldClass} />
             <div className="grid gap-2 sm:grid-cols-2">
-              <select name="challengeId" defaultValue="" aria-label="Challenge" className={fieldClass}>
-                <option value="">Fără challenge</option>
-                {(challenges.data ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <Select
+                name="challengeId"
+                aria-label="Challenge"
+                options={[{ value: "", label: "Fără challenge" }, ...(challenges.data ?? []).map((c) => ({ value: c.id as string, label: c.name as string }))]}
+              />
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="acceptReviews" defaultChecked /> Acceptă recenzii
               </label>

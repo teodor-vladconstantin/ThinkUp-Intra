@@ -4,11 +4,9 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/(app)/tasks/actions";
 import { PRIORITIES, PRIORITY_LABELS } from "@/lib/tasks";
-
-export const selectClass =
-  "h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60";
 
 export type Person = { clerk_id: string; full_name: string | null; department_id: number | null };
 export type PnOptions = {
@@ -81,19 +79,13 @@ export function TaskForm({
         <div className="grid gap-1.5">
           <Label htmlFor="departmentId">Departament executant</Label>
           {canChangeDepartment ? (
-            <select
+            <Select
               id="departmentId"
               name="departmentId"
-              className={selectClass}
-              value={departmentId ?? ""}
-              onChange={(e) => setDepartmentId(Number(e.target.value))}
-            >
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              value={departmentId != null ? String(departmentId) : ""}
+              onValueChange={(v) => setDepartmentId(Number(v))}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            />
           ) : (
             <>
               <input type="hidden" name="departmentId" value={departmentId ?? ""} />
@@ -104,14 +96,13 @@ export function TaskForm({
 
         <div className="grid gap-1.5">
           <Label htmlFor="assigneeId">Responsabil</Label>
-          <select id="assigneeId" name="assigneeId" className={selectClass} defaultValue={defaults.assigneeId ?? ""} key={departmentId}>
-            <option value="">Nealocat</option>
-            {assignable.map((p) => (
-              <option key={p.clerk_id} value={p.clerk_id}>
-                {p.full_name ?? p.clerk_id}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="assigneeId"
+            name="assigneeId"
+            key={departmentId}
+            defaultValue={defaults.assigneeId ?? ""}
+            options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? p.clerk_id }))]}
+          />
         </div>
 
         <div className="grid gap-1.5">
@@ -121,13 +112,12 @@ export function TaskForm({
 
         <div className="grid gap-1.5">
           <Label htmlFor="priority">Prioritate</Label>
-          <select id="priority" name="priority" className={selectClass} defaultValue={defaults.priority ?? 2}>
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABELS[p]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="priority"
+            name="priority"
+            defaultValue={String(defaults.priority ?? 2)}
+            options={PRIORITIES.map((p) => ({ value: String(p), label: PRIORITY_LABELS[p] }))}
+          />
         </div>
       </div>
 
@@ -136,30 +126,24 @@ export function TaskForm({
           <legend className="mb-1 text-sm font-medium">Legătură Program Național (opțional)</legend>
           {/* Marker: tells the action this form sends PN links, so it may change them. */}
           <input type="hidden" name="pnLinks" value="1" />
-          <select name="schoolId" aria-label="Liceu" className={selectClass} defaultValue={defaults.schoolId ?? ""}>
-            <option value="">Fără liceu</option>
-            {pn.schools.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select name="countyCode" aria-label="Județ" className={selectClass} defaultValue={defaults.countyCode ?? ""}>
-            <option value="">Fără județ</option>
-            {pn.counties.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select name="zoneId" aria-label="Zonă" className={selectClass} defaultValue={defaults.zoneId ?? ""}>
-            <option value="">Fără zonă</option>
-            {pn.zones.map((z) => (
-              <option key={z.id} value={z.id}>
-                {z.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="schoolId"
+            aria-label="Liceu"
+            defaultValue={defaults.schoolId != null ? String(defaults.schoolId) : ""}
+            options={[{ value: "", label: "Fără liceu" }, ...pn.schools.map((s) => ({ value: String(s.id), label: s.name }))]}
+          />
+          <Select
+            name="countyCode"
+            aria-label="Județ"
+            defaultValue={defaults.countyCode ?? ""}
+            options={[{ value: "", label: "Fără județ" }, ...pn.counties.map((c) => ({ value: c.code, label: c.name }))]}
+          />
+          <Select
+            name="zoneId"
+            aria-label="Zonă"
+            defaultValue={defaults.zoneId != null ? String(defaults.zoneId) : ""}
+            options={[{ value: "", label: "Fără zonă" }, ...pn.zones.map((z) => ({ value: String(z.id), label: z.name }))]}
+          />
         </fieldset>
       )}
 

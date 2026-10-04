@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { moveCounty } from "@/app/(app)/pn/actions";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import { formatDate } from "@/lib/dates";
 import { NO_ZONE_COLOR, SCHOOL_STATUS_LABELS, type County, type SchoolSummary, type Zone, type ZoneMove } from "@/lib/pn";
 
@@ -73,14 +73,13 @@ export function CountyMap({
 
       <aside className="space-y-4 rounded-xl border bg-card p-4" aria-live="polite">
         {/* Keyboard / phone alternative to clicking the map */}
-        <select aria-label="Alege județul" className={selectClass} value={selected ?? ""} onChange={(e) => setSelected(e.target.value || null)}>
-          <option value="">Alege un județ…</option>
-          {[...counties].sort((a, b) => a.name.localeCompare(b.name, "ro")).map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <Select
+          aria-label="Alege județul"
+          placeholder="Alege un județ…"
+          value={selected ?? ""}
+          onValueChange={(v) => setSelected(v || null)}
+          options={[...counties].sort((a, b) => a.name.localeCompare(b.name, "ro")).map((c) => ({ value: c.code, label: c.name }))}
+        />
 
         {!county ? (
           <p className="text-sm text-muted-foreground">Apasă pe un județ de pe hartă.</p>
@@ -97,14 +96,12 @@ export function CountyMap({
             {canManage && (
               <label className="grid gap-1.5 text-sm">
                 <span className="font-medium">Mută în zona</span>
-                <select className={selectClass} value={county.zone_id ?? ""} disabled={pending} onChange={(e) => onMove(e.target.value)}>
-                  <option value="">Fără zonă</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={county.zone_id != null ? String(county.zone_id) : ""}
+                  disabled={pending}
+                  onValueChange={onMove}
+                  options={[{ value: "", label: "Fără zonă" }, ...zones.map((z) => ({ value: String(z.id), label: z.name }))]}
+                />
                 {error && <span className="text-destructive">{error}</span>}
               </label>
             )}

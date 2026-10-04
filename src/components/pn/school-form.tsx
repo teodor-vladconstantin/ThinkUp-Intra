@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/(app)/pn/actions";
 import { SCHOOL_STATUS_LABELS, SCHOOL_STATUSES, type SchoolStatus } from "@/lib/pn";
 
@@ -43,25 +43,21 @@ export function SchoolForm({
           <Input id="city" name="city" maxLength={100} defaultValue={school?.city ?? ""} />
         </Field>
         <Field label="Județ" id="countyCode">
-          <select id="countyCode" name="countyCode" required className={selectClass} defaultValue={school?.county_code ?? defaultCounty ?? ""}>
-            <option value="" disabled>
-              Alege…
-            </option>
-            {counties.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="countyCode"
+            name="countyCode"
+            required
+            defaultValue={school?.county_code ?? defaultCounty ?? ""}
+            options={counties.map((c) => ({ value: c.code, label: c.name }))}
+          />
         </Field>
         <Field label="Status relație" id="status">
-          <select id="status" name="status" className={selectClass} defaultValue={school?.status ?? "contacted"}>
-            {SCHOOL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {SCHOOL_STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="status"
+            name="status"
+            defaultValue={school?.status ?? "contacted"}
+            options={SCHOOL_STATUSES.map((s) => ({ value: s, label: SCHOOL_STATUS_LABELS[s] }))}
+          />
         </Field>
         <Field label="Persoană de contact" id="contactName">
           <Input id="contactName" name="contactName" maxLength={150} defaultValue={school?.contact_name ?? ""} autoComplete="off" />

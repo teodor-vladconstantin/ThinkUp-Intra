@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/(app)/meetings/actions";
 
 export type MeetingPerson = { clerk_id: string; full_name: string | null; department_id: number | null; role: string };
@@ -61,19 +61,13 @@ export function MeetingForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="target">Tip</Label>
-          <select
+          <Select
             id="target"
-            className={selectClass}
             value={targetValue}
             disabled={mode === "edit"}
-            onChange={(e) => setTargetValue(e.target.value)}
-          >
-            {targets.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={setTargetValue}
+            options={targets.map((t) => ({ value: t.value, label: t.label }))}
+          />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="heldAt">Data</Label>
@@ -113,14 +107,12 @@ export function MeetingForm({
             {followUps.map((row, i) => (
               <div key={i} className="grid gap-2 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-center">
                 <Input aria-label="Titlu sarcină" value={row.title} maxLength={200} onChange={(e) => updateRow(i, { title: e.target.value })} placeholder="Ce trebuie făcut" />
-                <select aria-label="Responsabil" className={selectClass} value={row.assigneeId} onChange={(e) => updateRow(i, { assigneeId: e.target.value })}>
-                  <option value="">Nealocat</option>
-                  {assignable.map((p) => (
-                    <option key={p.clerk_id} value={p.clerk_id}>
-                      {p.full_name ?? p.clerk_id}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  aria-label="Responsabil"
+                  value={row.assigneeId}
+                  onValueChange={(v) => updateRow(i, { assigneeId: v })}
+                  options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? p.clerk_id }))]}
+                />
                 <Input aria-label="Termen" type="date" value={row.deadline} onChange={(e) => updateRow(i, { deadline: e.target.value })} />
                 <Button type="button" variant="ghost" size="icon" aria-label="Șterge rândul" onClick={() => setFollowUps((rows) => rows.filter((_, j) => j !== i))}>
                   <X />

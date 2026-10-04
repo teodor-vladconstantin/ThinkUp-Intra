@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SectionLabel } from "@/components/section-label";
-import { selectClass } from "@/components/tasks/task-form";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireProfile } from "@/lib/auth";
@@ -49,11 +49,17 @@ export default async function DecisionsPage(props: PageProps<"/decisions">) {
       {/* Plain GET form: the filters live in the URL, so a search can be shared as a link. */}
       <form className="flex flex-wrap items-center gap-2" role="search">
         <Input name="q" defaultValue={q} placeholder="Caută în decizii" aria-label="Caută în decizii" className="max-w-sm" />
-        <select name="scope" defaultValue={scope} aria-label="Ședințe" className={`${selectClass} w-auto`}>
-          <option value="">Toate ședințele</option>
-          <option value="cd">Consiliul Director</option>
-          <option value="department">Departamente</option>
-        </select>
+        <Select
+          name="scope"
+          defaultValue={scope}
+          aria-label="Ședințe"
+          className="w-auto min-w-48"
+          options={[
+            { value: "", label: "Toate ședințele" },
+            { value: "cd", label: "Consiliul Director" },
+            { value: "department", label: "Departamente" },
+          ]}
+        />
         <Button type="submit" variant="outline">Caută</Button>
       </form>
 

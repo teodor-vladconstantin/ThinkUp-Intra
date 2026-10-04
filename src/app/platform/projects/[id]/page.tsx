@@ -5,6 +5,7 @@ import { ActionButton, ActionForm, FileUpload, ProgressSelect, fieldClass } from
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { isPlatformMentor, platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
@@ -254,16 +255,13 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
               {canReview && (
                 <ActionForm action={addReview} submitLabel="Trimite recenzia">
                   <input type="hidden" name="projectId" value={project.id} />
-                  <select name="rating" required defaultValue="" aria-label="Notă" className={fieldClass}>
-                    <option value="" disabled>
-                      Notă (1–5 stele)
-                    </option>
-                    {[5, 4, 3, 2, 1].map((n) => (
-                      <option key={n} value={n}>
-                        {"★".repeat(n)}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    name="rating"
+                    required
+                    aria-label="Notă"
+                    placeholder="Notă (1–5 stele)"
+                    options={[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: "★".repeat(n) + "☆".repeat(5 - n) }))}
+                  />
                   <textarea name="body" rows={2} maxLength={2000} placeholder="Comentariu (opțional)" aria-label="Comentariu" className={fieldClass} />
                 </ActionForm>
               )}
@@ -296,17 +294,12 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
               {isMember && candidates.length > 0 && (
                 <ActionForm action={addMember} submitLabel="Adaugă în echipă">
                   <input type="hidden" name="projectId" value={project.id} />
-                  <select name="profileId" required defaultValue="" aria-label="Persoană" className={fieldClass}>
-                    <option value="" disabled>
-                      Alege…
-                    </option>
-                    {candidates.map((p) => (
-                      <option key={p.clerk_id} value={p.clerk_id}>
-                        {p.full_name ?? "—"}
-                        {p.is_mentor ? " (mentor)" : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    name="profileId"
+                    required
+                    aria-label="Persoană"
+                    options={candidates.map((p) => ({ value: p.clerk_id, label: `${p.full_name ?? "—"}${p.is_mentor ? " (mentor)" : ""}` }))}
+                  />
                 </ActionForm>
               )}
             </CardContent>
@@ -361,16 +354,14 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                 {mentor && challengeRows.length > 0 && (
                   <ActionForm action={gradeProject} submitLabel="Notează echipa">
                     <input type="hidden" name="projectId" value={project.id} />
-                    <select name="challengeId" required defaultValue={project.challenge_id ?? ""} aria-label="Challenge" className={fieldClass}>
-                      <option value="" disabled>
-                        Challenge…
-                      </option>
-                      {challengeRows.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} (max {c.max_score})
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      name="challengeId"
+                      required
+                      aria-label="Challenge"
+                      placeholder="Challenge…"
+                      defaultValue={project.challenge_id ?? ""}
+                      options={challengeRows.map((c) => ({ value: c.id, label: `${c.name} (max ${c.max_score})` }))}
+                    />
                     <Input name="score" type="number" min={0} required placeholder="Punctaj" aria-label="Punctaj" />
                     <textarea name="feedback" rows={2} maxLength={5000} placeholder="Comentariu (opțional)" aria-label="Comentariu" className={fieldClass} />
                   </ActionForm>
@@ -390,14 +381,12 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                   <input type="hidden" name="id" value={project.id} />
                   <Input name="name" required maxLength={150} defaultValue={project.name} aria-label="Nume" />
                   <textarea name="description" rows={4} maxLength={5000} defaultValue={project.description ?? ""} aria-label="Descriere" className={fieldClass} />
-                  <select name="challengeId" defaultValue={project.challenge_id ?? ""} aria-label="Challenge" className={fieldClass}>
-                    <option value="">Fără challenge</option>
-                    {challengeRows.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    name="challengeId"
+                    aria-label="Challenge"
+                    defaultValue={project.challenge_id ?? ""}
+                    options={[{ value: "", label: "Fără challenge" }, ...challengeRows.map((c) => ({ value: c.id, label: c.name }))]}
+                  />
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă recenzii
                   </label>

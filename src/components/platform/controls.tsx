@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/platform/actions";
 import { prepareUpload } from "@/app/platform/actions";
 import { browserStorage } from "@/lib/supabase/browser";
@@ -95,22 +96,15 @@ export function ActionButton({
 export function ProgressSelect({ value, action, disabled }: { value: number; action: (v: number) => Promise<FormState>; disabled?: boolean }) {
   const [pending, start] = useTransition();
   return (
-    <select
+    <Select
       aria-label="Progres"
-      defaultValue={value}
+      size="sm"
+      defaultValue={String(value)}
       disabled={disabled || pending}
-      onChange={(e) => {
-        const v = Number(e.target.value);
-        start(async () => void (await action(v)));
-      }}
-      className="h-8 rounded-md border border-input bg-card px-2 text-sm"
-    >
-      {Array.from({ length: 11 }, (_, i) => i * 10).map((v) => (
-        <option key={v} value={v}>
-          {v}%
-        </option>
-      ))}
-    </select>
+      onValueChange={(v) => start(async () => void (await action(Number(v))))}
+      className="w-20"
+      options={Array.from({ length: 11 }, (_, i) => ({ value: String(i * 10), label: `${i * 10}%` }))}
+    />
   );
 }
 
