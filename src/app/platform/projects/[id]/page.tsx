@@ -31,6 +31,8 @@ import {
   setThumbnail,
   updateProject,
 } from "../../actions";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Project = {
   id: string;
@@ -143,7 +145,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                   <input type="hidden" name="projectId" value={project.id} />
                   <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
                     <Input name="name" required maxLength={200} placeholder="Obiectiv nou" aria-label="Obiectiv" />
-                    <Input name="deadline" type="date" aria-label="Termen" />
+                    <DatePicker name="deadline" aria-label="Termen" placeholder="Termen (opțional)" />
                   </div>
                   <textarea name="description" rows={2} maxLength={2000} placeholder="Detalii (opțional)" aria-label="Detalii" className={fieldClass} />
                 </ActionForm>
@@ -388,7 +390,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                     options={[{ value: "", label: "Fără challenge" }, ...challengeRows.map((c) => ({ value: c.id, label: c.name }))]}
                   />
                   <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
+                    <Checkbox name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
                   </label>
                 </ActionForm>
                 <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">

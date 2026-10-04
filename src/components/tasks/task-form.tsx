@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/(app)/tasks/actions";
 import { PRIORITIES, PRIORITY_LABELS } from "@/lib/tasks";
+import { DatePicker } from "@/components/ui/date-picker";
 
 export type Person = { clerk_id: string; full_name: string | null; department_id: number | null };
 export type PnOptions = {
@@ -107,7 +108,7 @@ export function TaskForm({
 
         <div className="grid gap-1.5">
           <Label htmlFor="deadline">Termen</Label>
-          <Input id="deadline" name="deadline" type="date" defaultValue={defaults.deadline} />
+          <DatePicker id="deadline" name="deadline" placeholder="Fără termen" defaultValue={defaults.deadline} />
         </div>
 
         <div className="grid gap-1.5">

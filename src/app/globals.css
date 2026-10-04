@@ -107,6 +107,16 @@
   html {
     @apply font-sans;
   }
+  /* No browser spin buttons on number fields: type the value, like every other field */
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 /* Sidebar navigation: uppercase, letter-spaced (PRD section 9) */
 @layer components {

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAnnouncement, type FormState } from "@/app/(app)/announcements/actions";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function AnnouncementForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(createAnnouncement, null);
@@ -33,10 +35,10 @@ export function AnnouncementForm() {
       <div className="flex flex-wrap items-end gap-6">
         <div className="grid gap-1.5">
           <Label htmlFor="ann-expires">Expiră pe (opțional)</Label>
-          <Input id="ann-expires" name="expiresAt" type="date" />
+          <DatePicker id="ann-expires" name="expiresAt" placeholder="Fără expirare" />
         </div>
         <label className="flex items-center gap-2 pb-2 text-sm">
-          <input type="checkbox" name="important" className="size-4 accent-primary" />
+          <Checkbox name="important" />
           Important
         </label>
       </div>

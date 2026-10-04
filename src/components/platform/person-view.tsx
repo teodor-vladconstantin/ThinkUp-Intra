@@ -19,6 +19,7 @@ import {
   setAvatar,
   setObjectiveProgress,
 } from "@/app/platform/actions";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const SOCIAL_LABELS: Record<string, string> = { github: "GitHub", linkedin: "LinkedIn", instagram: "Instagram", website: "Site" };
 
@@ -216,7 +217,7 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
                 <ActionForm action={addObjective} submitLabel="Adaugă obiectiv">
                   <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
                     <Input name="name" required maxLength={200} placeholder="Obiectiv nou" aria-label="Obiectiv" />
-                    <Input name="deadline" type="date" aria-label="Termen" />
+                    <DatePicker name="deadline" aria-label="Termen" placeholder="Termen (opțional)" />
                   </div>
                   <Input name="description" maxLength={2000} placeholder="Detalii (opțional)" aria-label="Detalii" />
                 </ActionForm>

@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/dates";
 import { isPlatformMentor, platformPeople, requirePlatformProfile } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
 import { createChallenge, setChallengeArchived } from "../actions";
+import { DatePicker } from "@/components/ui/date-picker";
 
 type Challenge = {
   id: string;
@@ -58,7 +59,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
               <Input name="name" required maxLength={200} placeholder="Nume" aria-label="Nume" />
               <textarea name="description" rows={3} maxLength={5000} placeholder="Descriere / cerințe" aria-label="Descriere" className={fieldClass} />
               <div className="grid gap-2 sm:grid-cols-2">
-                <Input name="deadline" type="date" aria-label="Termen" />
+                <DatePicker name="deadline" aria-label="Termen" placeholder="Termen (opțional)" />
                 <Input name="maxScore" type="number" min={1} max={10000} defaultValue={100} required aria-label="Punctaj maxim" />
               </div>
             </ActionForm>

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import type { FormState } from "@/app/(app)/meetings/actions";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export type MeetingPerson = { clerk_id: string; full_name: string | null; department_id: number | null; role: string };
 // One choice in "Tip ședință": a CD meeting, or a department meeting for one department.
@@ -71,7 +73,7 @@ export function MeetingForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="heldAt">Data</Label>
-          <Input id="heldAt" name="heldAt" type="date" required defaultValue={defaults.heldAt} />
+          <DatePicker id="heldAt" name="heldAt" required defaultValue={defaults.heldAt} />
         </div>
       </div>
 
@@ -80,7 +82,7 @@ export function MeetingForm({
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {present.map((p) => (
             <label key={p.clerk_id} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="attendees" value={p.clerk_id} defaultChecked={attendees.has(p.clerk_id)} className="size-4 accent-primary" />
+              <Checkbox name="attendees" value={p.clerk_id} defaultChecked={attendees.has(p.clerk_id)} />
               {p.full_name ?? p.clerk_id}
             </label>
           ))}
@@ -113,7 +115,7 @@ export function MeetingForm({
                   onValueChange={(v) => updateRow(i, { assigneeId: v })}
                   options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? p.clerk_id }))]}
                 />
-                <Input aria-label="Termen" type="date" value={row.deadline} onChange={(e) => updateRow(i, { deadline: e.target.value })} />
+                <DatePicker aria-label="Termen" placeholder="Termen" value={row.deadline} onValueChange={(v) => updateRow(i, { deadline: v })} />
                 <Button type="button" variant="ghost" size="icon" aria-label="Șterge rândul" onClick={() => setFollowUps((rows) => rows.filter((_, j) => j !== i))}>
                   <X />
                 </Button>
