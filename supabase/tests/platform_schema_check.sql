@@ -62,7 +62,7 @@ insert into rls_results (persona, check_name, expected, actual) values
 insert into rls_results (persona, check_name, expected, actual) values
   ('student_a', 'add material', 'ok', pg_temp.try($q$insert into materials (project_id, name, created_by) select id, 'Y Mat A', 'y_a' from projects where name = 'Y Proiect A'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('student_a', 'add file to material', 'ok', pg_temp.try($q$insert into material_files (material_id, name, storage_path) select id, 'f.pdf', 'y/a/f.pdf' from materials where name = 'Y Mat A'$q$));
+  ('student_a', 'add file to material', 'ok', pg_temp.try($q$insert into material_files (material_id, name, storage_path) select id, 'f.pdf', project_id || '/f.pdf' from materials where name = 'Y Mat A'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('student_a', 'change project creator', 'denied', pg_temp.try($q$update projects set created_by = 'y_b' where name = 'Y Proiect A'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
