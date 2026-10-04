@@ -13,8 +13,8 @@ export function AmbassadorContactForm({ id, email, phone }: { id: number; email:
       <summary className="cursor-pointer text-primary">Editează contactul</summary>
       <form action={action} className="mt-2 grid gap-2">
         <input type="hidden" name="id" value={id} />
-        <Input name="email" type="email" maxLength={200} defaultValue={email ?? ""} placeholder="Email" aria-label="Email" autoComplete="off" />
-        <Input name="phone" type="tel" maxLength={40} defaultValue={phone ?? ""} placeholder="Telefon" aria-label="Telefon" autoComplete="off" />
+        <Input name="email" type="email" required maxLength={200} defaultValue={email ?? ""} placeholder="Email de contact" aria-label="Email de contact" autoComplete="off" />
+        <Input name="phone" type="tel" required maxLength={40} defaultValue={phone ?? ""} placeholder="Telefon" aria-label="Telefon" autoComplete="off" />
         <div className="flex items-center gap-2">
           <Button type="submit" size="sm" variant="outline" disabled={pending}>
             Salvează

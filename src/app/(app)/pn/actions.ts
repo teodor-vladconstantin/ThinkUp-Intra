@@ -130,11 +130,19 @@ export async function logSchoolContact(_prev: FormState, formData: FormData): Pr
 
 // ---------- ambassadors ----------
 
+// Contact email and phone are required for every ambassador (program decision).
+const requiredEmail = z.string().trim().min(1, "Emailul e obligatoriu").pipe(z.email("Email invalid").max(200));
+const requiredPhone = z
+  .string()
+  .trim()
+  .min(1, "Telefonul e obligatoriu")
+  .regex(/^[+()\d\s.-]{6,40}$/, "Telefon invalid");
+
 const ambassadorSchema = z.object({
   schoolId: z.coerce.number().int().positive(),
   fullName: z.string().trim().min(1, "Numele e obligatoriu").max(150),
-  email: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.email("Email invalid").max(200).optional()),
-  phone: optionalText(40),
+  email: requiredEmail,
+  phone: requiredPhone,
 });
 
 export async function addAmbassador(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -149,8 +157,8 @@ export async function addAmbassador(_prev: FormState, formData: FormData): Promi
   const { error } = await createUserClient().rpc("add_ambassador", {
     p_full_name: f.fullName,
     p_school_id: f.schoolId,
-    p_email: f.email ?? null,
-    p_phone: f.phone ?? null,
+    p_email: f.email,
+    p_phone: f.phone,
   });
   if (error) return { ok: false, message: "Ambasadorul nu a putut fi salvat." };
 
@@ -168,12 +176,12 @@ export async function setAmbassadorActive(formData: FormData) {
 
 const contactSchema = z.object({
   id: z.coerce.number().int().positive(),
-  email: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.email("Email invalid").max(200).optional()),
-  phone: optionalText(40),
+  email: requiredEmail,
+  phone: requiredPhone,
 });
 
 // Fix an ambassador's contacts. RLS (ambc_all) limits this to the PN department.
-// Both empty = delete the row: we keep only what is needed about minors.
+// Both fields are required, so a contact row always has both.
 export async function updateAmbassadorContacts(_prev: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireProfile();
   if (!actor || !isPnMember(actor)) return { ok: false, message: "Doar departamentul PN editează contactele." };
@@ -182,11 +190,9 @@ export async function updateAmbassadorContacts(_prev: FormState, formData: FormD
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const { id, email, phone } = parsed.data;
 
-  const contacts = createUserClient().from("ambassador_contacts");
-  const { error } =
-    email || phone
-      ? await contacts.upsert({ ambassador_id: id, email: email ?? null, phone: phone ?? null }, { onConflict: "ambassador_id" })
-      : await contacts.delete().eq("ambassador_id", id);
+  const { error } = await createUserClient()
+    .from("ambassador_contacts")
+    .upsert({ ambassador_id: id, email, phone }, { onConflict: "ambassador_id" });
   if (error) return { ok: false, message: "Contactul nu a putut fi salvat." };
 
   revalidatePath("/pn", "layout");

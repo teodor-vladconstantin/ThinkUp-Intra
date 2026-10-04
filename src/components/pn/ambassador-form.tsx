@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { addAmbassador, type FormState } from "@/app/(app)/pn/actions";
 
 // Manual add (the CSV import comes later). Ambassadors are likely minors: only the
-// fields the program needs, contacts optional.
+// fields the program needs. Contact email and phone are required.
 export function AmbassadorForm({ schoolId }: { schoolId: number }) {
   const [state, action, pending] = useActionState<FormState, FormData>(addAmbassador, null);
   const ref = useRef<HTMLFormElement>(null);
@@ -21,8 +21,8 @@ export function AmbassadorForm({ schoolId }: { schoolId: number }) {
       <Input name="fullName" required maxLength={150} placeholder="Nume și prenume" aria-label="Nume și prenume" autoComplete="off" />
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <Input name="email" type="email" maxLength={200} placeholder="Email (opțional)" aria-label="Email" autoComplete="off" />
-        <Input name="phone" type="tel" maxLength={40} placeholder="Telefon (opțional)" aria-label="Telefon" autoComplete="off" />
+        <Input name="email" type="email" required maxLength={200} placeholder="Email de contact" aria-label="Email de contact" autoComplete="off" />
+        <Input name="phone" type="tel" required maxLength={40} placeholder="Telefon" aria-label="Telefon" autoComplete="off" />
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" variant="outline" disabled={pending}>
