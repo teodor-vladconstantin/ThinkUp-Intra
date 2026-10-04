@@ -73,7 +73,8 @@ describe("students", () => {
     expect(canInvite(ceo, asStudent)).toBe(true);
     expect(canInvite({ ...vpTech, departmentName: "Tech" }, asStudent)).toBe(false);
     expect(canInvite(student, asStudent)).toBe(false);
-    expect(invitableRoles(vpPn)).toEqual(["mentor", "student"]);
+    expect(invitableRoles(vpPn)).toEqual(["mentor"]); // students: from the PN ambassador record
+    expect(invitableRoles(ceo)).not.toContain("student");
     expect(invitableRoles({ ...vpTech, departmentName: "Tech" })).toEqual(["mentor"]);
   });
 

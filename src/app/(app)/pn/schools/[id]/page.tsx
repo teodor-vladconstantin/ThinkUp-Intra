@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { AmbassadorContactForm } from "@/components/pn/ambassador-contact-form";
 import { AmbassadorForm } from "@/components/pn/ambassador-form";
+import { AmbassadorInviteForm } from "@/components/pn/ambassador-invite-form";
 import { ContactLogForm } from "@/components/pn/contact-log-form";
 import { SchoolForm } from "@/components/pn/school-form";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { formatDateTime } from "@/lib/dates";
 import { isPnMember } from "@/lib/permissions";
 import { SCHOOL_STATUS_LABELS, type SchoolStatus } from "@/lib/pn";
 import { createUserClient } from "@/lib/supabase/server";
-import { setAmbassadorActive, updateSchool } from "../../actions";
+import { setAmbassadorActive, unlinkAmbassador, updateSchool } from "../../actions";
 
 type School = {
   id: number;
@@ -25,7 +26,7 @@ type School = {
   county: { name: string } | null;
 };
 type LogRow = { id: number; note: string; contacted_at: string; contacter: { full_name: string | null } | null };
-type Ambassador = { id: number; full_name: string; platform_user_id: string | null; active: boolean };
+type Ambassador = { id: number; full_name: string; active: boolean; account: { full_name: string | null; email: string } | null };
 type Contact = { ambassador_id: number; email: string | null; phone: string | null };
 
 export default async function SchoolPage(props: PageProps<"/pn/schools/[id]">) {
@@ -46,10 +47,10 @@ export default async function SchoolPage(props: PageProps<"/pn/schools/[id]">) {
 
   const [log, ambassadors, counties] = await Promise.all([
     db.from("school_contact_log").select("id, note, contacted_at, contacter:profiles!contacted_by(full_name)").eq("school_id", school.id).order("contacted_at", { ascending: false }),
-    db.from("ambassadors").select("id, full_name, platform_user_id, active").eq("school_id", school.id).order("full_name"),
+    db.from("ambassadors").select("id, full_name, active, account:profiles!profile_id(full_name, email)").eq("school_id", school.id).order("full_name"),
     db.from("counties").select("code, name").order("name"),
   ]);
-  const ambassadorRows = (ambassadors.data ?? []) as Ambassador[];
+  const ambassadorRows = (ambassadors.data ?? []) as unknown as Ambassador[];
 
   // RLS returns contact rows only to the PN department (ambc_all); for everyone else this is empty.
   const { data: contactRows } = ambassadorRows.length
@@ -57,6 +58,12 @@ export default async function SchoolPage(props: PageProps<"/pn/schools/[id]">) {
     : { data: [] };
   const contacts = new Map(((contactRows ?? []) as Contact[]).map((c) => [c.ambassador_id, c]));
   const pn = isPnMember(profile);
+
+  // Pending platform invitations of these ambassadors (inv_read lets PN see student invitations).
+  const { data: pendingRows } = pn && ambassadorRows.length
+    ? await db.from("invitations").select("ambassador_id, email").eq("status", "pending").in("ambassador_id", ambassadorRows.map((a) => a.id))
+    : { data: [] };
+  const pending = new Map(((pendingRows ?? []) as { ambassador_id: number; email: string }[]).map((r) => [r.ambassador_id, r.email]));
 
   return (
     <div className="space-y-6">
@@ -142,6 +149,21 @@ export default async function SchoolPage(props: PageProps<"/pn/schools/[id]">) {
                     </div>
                     {c && <p className="text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(" · ")}</p>}
                     {pn && <AmbassadorContactForm id={a.id} email={c?.email ?? null} phone={c?.phone ?? null} />}
+                    {pn && a.account && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-success">Cont platformă: {a.account.full_name ?? a.account.email}</span>
+                        <form action={unlinkAmbassador}>
+                          <input type="hidden" name="id" value={a.id} />
+                          <Button type="submit" variant="ghost" size="sm">
+                            Dezleagă
+                          </Button>
+                        </form>
+                      </div>
+                    )}
+                    {pn && !a.account && pending.has(a.id) && (
+                      <p className="mt-1 text-xs text-muted-foreground">Invitație trimisă către {pending.get(a.id)}, în așteptare.</p>
+                    )}
+                    {pn && a.active && !a.account && !pending.has(a.id) && <AmbassadorInviteForm ambassadorId={a.id} defaultEmail="" />}
                   </li>
                 );
               })}

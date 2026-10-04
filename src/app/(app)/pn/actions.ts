@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
-import { canManageZones, isPnMember } from "@/lib/permissions";
+import { sendInvitation } from "@/lib/invitations";
+import { ALLOWED_EMAIL_HINT, canManageZones, isAllowedEmail, isPnMember } from "@/lib/permissions";
 import { SCHOOL_STATUSES } from "@/lib/pn";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -132,7 +133,6 @@ export async function logSchoolContact(_prev: FormState, formData: FormData): Pr
 const ambassadorSchema = z.object({
   schoolId: z.coerce.number().int().positive(),
   fullName: z.string().trim().min(1, "Numele e obligatoriu").max(150),
-  platformUserId: optionalText(100),
   email: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.email("Email invalid").max(200).optional()),
   phone: optionalText(40),
 });
@@ -149,13 +149,10 @@ export async function addAmbassador(_prev: FormState, formData: FormData): Promi
   const { error } = await createUserClient().rpc("add_ambassador", {
     p_full_name: f.fullName,
     p_school_id: f.schoolId,
-    p_platform_user_id: f.platformUserId ?? null,
     p_email: f.email ?? null,
     p_phone: f.phone ?? null,
   });
-  if (error) {
-    return { ok: false, message: error.code === "23505" ? "Contul de pe platformă e deja asociat unui ambasador." : "Ambasadorul nu a putut fi salvat." };
-  }
+  if (error) return { ok: false, message: "Ambasadorul nu a putut fi salvat." };
 
   revalidatePath("/pn", "layout");
   return { ok: true, message: "Ambasador adăugat." };
@@ -194,4 +191,44 @@ export async function updateAmbassadorContacts(_prev: FormState, formData: FormD
 
   revalidatePath("/pn", "layout");
   return { ok: true, message: "Salvat." };
+}
+
+// ---------- ambassador accounts (platform access) ----------
+
+// Gives an ambassador their platform account. An existing account with that email
+// (e.g. a Tech mentor who is also an ambassador) is linked right away; otherwise a
+// student invitation carrying the ambassador id is sent, linked at first sign-in.
+export async function inviteAmbassador(_prev: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requireProfile();
+  if (!actor || !isPnMember(actor)) return { ok: false, message: "Doar departamentul PN invită ambasadori." };
+
+  const ambassadorId = z.coerce.number().int().positive().safeParse(formData.get("ambassadorId"));
+  const email = z.string().trim().toLowerCase().pipe(z.email("Email invalid")).safeParse(formData.get("email"));
+  if (!ambassadorId.success) return { ok: false, message: "Ambasador invalid." };
+  if (!email.success) return { ok: false, message: email.error.issues[0].message };
+  if (!isAllowedEmail(email.data)) return { ok: false, message: `Doar adrese ${ALLOWED_EMAIL_HINT}.` };
+
+  const db = createUserClient();
+  // PN reads staff and student profiles (profiles_read), so an existing account is found here.
+  const { data: existing } = await db.from("profiles").select("clerk_id").eq("email", email.data).maybeSingle();
+  if (existing) {
+    const { data, error } = await db.from("ambassadors").update({ profile_id: existing.clerk_id }).eq("id", ambassadorId.data).select("id");
+    if (error?.code === "23505") return { ok: false, message: "Contul e deja legat de alt ambasador." };
+    if (error || !data?.length) return { ok: false, message: "Legătura nu a putut fi salvată." };
+    revalidatePath("/pn", "layout");
+    return { ok: true, message: "Cont existent legat." };
+  }
+
+  const result = await sendInvitation(actor, { email: email.data, role: "student", departmentId: null, ambassadorId: ambassadorId.data });
+  if (result.ok) revalidatePath("/pn", "layout");
+  return result;
+}
+
+// Removes platform access by unlinking the account (the account itself stays; deactivate it in Users if needed).
+export async function unlinkAmbassador(formData: FormData) {
+  const actor = await requireProfile();
+  const id = z.coerce.number().int().positive().safeParse(formData.get("id"));
+  if (!actor || !isPnMember(actor) || !id.success) return;
+  await createUserClient().from("ambassadors").update({ profile_id: null }).eq("id", id.data);
+  revalidatePath("/pn", "layout");
 }

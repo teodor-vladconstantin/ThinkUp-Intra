@@ -66,7 +66,7 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
   const pattern = escapeLike(email);
   const invitation = await db
     .from("invitations")
-    .select("id, role, department_id")
+    .select("id, role, department_id, ambassador_id")
     .ilike("email", pattern)
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -95,6 +95,12 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
   // still exists and the user is in; the invitation just stays "pending". Move both
   // writes into one SQL function if that ever happens in practice.
   await db.from("invitations").update({ status: "accepted" }).eq("id", invitation.data.id).eq("status", "pending");
+
+  // An ambassador invited from PN: link the new account to their PN record, so the
+  // platform opens for them. Only fills an empty link, never moves an existing one.
+  if (invitation.data.ambassador_id) {
+    await db.from("ambassadors").update({ profile_id: userId }).eq("id", invitation.data.ambassador_id).is("profile_id", null);
+  }
 
   const created = await db.from("profiles").select(PROFILE_COLUMNS).eq("clerk_id", userId).single();
   if (created.error) throw new Error("Could not load profile");

@@ -68,11 +68,11 @@ export function canInvite(a: Actor & MaybeDept, target: { role: AppRole; departm
   );
 }
 
-// Roles the actor may pick in the invitation form.
+// Roles the actor may pick in the admin invitation form. Students are never invited
+// there: PN invites them from the ambassador's record, so the account gets linked.
 export function invitableRoles(a: Actor & MaybeDept): AppRole[] {
-  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return [...ROLES];
-  const roles: AppRole[] = a.role === "vp" ? ["mentor"] : [];
-  return isPnMember(a) ? [...roles, "student"] : roles;
+  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return ROLES.filter((r) => r !== "student");
+  return a.role === "vp" ? ["mentor"] : [];
 }
 
 // Mirrors can_access_pn(); deptCanAccessPn is departments.can_access_pn of the actor.

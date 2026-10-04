@@ -19,7 +19,7 @@ export function AmbassadorForm({ schoolId }: { schoolId: number }) {
     <form ref={ref} action={action} className="grid gap-2">
       <input type="hidden" name="schoolId" value={schoolId} />
       <Input name="fullName" required maxLength={150} placeholder="Nume și prenume" aria-label="Nume și prenume" autoComplete="off" />
-      <Input name="platformUserId" maxLength={100} placeholder="ID pe platforma ambasadorilor (opțional)" aria-label="ID platformă" autoComplete="off" />
+
       <div className="grid gap-2 sm:grid-cols-2">
         <Input name="email" type="email" maxLength={200} placeholder="Email (opțional)" aria-label="Email" autoComplete="off" />
         <Input name="phone" type="tel" maxLength={40} placeholder="Telefon (opțional)" aria-label="Telefon" autoComplete="off" />

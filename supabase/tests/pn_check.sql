@@ -109,13 +109,12 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"p_mentor","role":"authenticated"}', true);
 set local role authenticated;
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'add ambassador with contacts', 'ok', pg_temp.try($q$select add_ambassador('P Elev', (select id from schools where name = 'P Liceu'), 'plat-1', 'elev@x.ro', '')$q$));
+  ('mentor_pn', 'add ambassador with contacts', 'ok', pg_temp.try($q$select add_ambassador('P Elev', (select id from schools where name = 'P Liceu'), 'elev@x.ro', '')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'empty phone stored as null', 'null', pg_temp.val($q$select c.phone from ambassador_contacts c join ambassadors a on a.id = c.ambassador_id where a.full_name = 'P Elev'$q$)),
-  ('mentor_pn', 'add ambassador without contacts -> no contacts row', 'ok', pg_temp.try($q$select add_ambassador('P Elev 2', (select id from schools where name = 'P Liceu'), null, ' ', null)$q$));
+  ('mentor_pn', 'add ambassador without contacts -> no contacts row', 'ok', pg_temp.try($q$select add_ambassador('P Elev 2', (select id from schools where name = 'P Liceu'), ' ', null)$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'contacts rows', '1', pg_temp.cnt($q$select 1 from ambassador_contacts$q$)),
-  ('mentor_pn', 'duplicate platform id', 'denied', pg_temp.try($q$select add_ambassador('P Dup', (select id from schools where name = 'P Liceu'), 'plat-1', null, null)$q$));
+  ('mentor_pn', 'contacts rows', '1', pg_temp.cnt($q$select 1 from ambassador_contacts$q$));
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"p_sec","role":"authenticated"}', true);
@@ -125,7 +124,7 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('secretary', 'sees no ambassador contacts', '0', pg_temp.cnt($q$select 1 from ambassador_contacts$q$)),
   ('secretary', 'sees school contacts (PN module access)', 'prof@liceu.ro', pg_temp.val($q$select contact_email from schools where name = 'P Liceu'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('secretary', 'add ambassador', 'denied', pg_temp.try($q$select add_ambassador('P S', (select id from schools where name = 'P Liceu'), null, null, null)$q$));
+  ('secretary', 'add ambassador', 'denied', pg_temp.try($q$select add_ambassador('P S', (select id from schools where name = 'P Liceu'), null, null)$q$));
 reset role;
 
 -- =====================================================================

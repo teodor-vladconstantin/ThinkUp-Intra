@@ -5,7 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { canInvite, isAllowedEmail, needsDepartment, ROLES, ALLOWED_EMAIL_HINT } from "@/lib/permissions";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { sendInvitation } from "@/lib/invitations";
 import { createUserClient } from "@/lib/supabase/server";
 
 export type InviteState = { ok: boolean; message: string } | null;
@@ -42,41 +42,13 @@ export async function createInvitation(_prev: InviteState, formData: FormData): 
     return { ok: false, message: "Nu ai dreptul să trimiți această invitație." };
   }
 
-  const db = createUserClient();
-  const existing = await db.from("profiles").select("clerk_id").eq("email", email).maybeSingle();
+  const existing = await createUserClient().from("profiles").select("clerk_id").eq("email", email).maybeSingle();
   if (existing.data) return { ok: false, message: "Această persoană are deja cont." };
 
-  // 4. Insert as the user, so RLS is the final judge. Done BEFORE Clerk sends the
-  //    email: if RLS or the unique index says no, nobody gets an invitation.
-  const inserted = await db
-    .from("invitations")
-    .insert({ email, role, department_id: departmentId, invited_by: actor.clerkId })
-    .select("id")
-    .single();
-  if (inserted.error) {
-    // 23505 = unique_violation (invitations_pending_email_key)
-    if (inserted.error.code === "23505") return { ok: false, message: "Există deja o invitație în așteptare pentru acest email." };
-    return { ok: false, message: "Invitația nu a putut fi salvată." };
-  }
-
-  // 5. Create the Clerk invitation. publicMetadata is informational only: the
-  //    profile is built from the invitations row, never from Clerk metadata.
-  try {
-    const clerk = await clerkClient();
-    await clerk.invitations.createInvitation({
-      emailAddress: email,
-      publicMetadata: { role, departmentId },
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/sign-up`,
-    });
-  } catch {
-    // Roll our row back to "revoked" so the email can be invited again. Admin client
-    // because a VP has no update right on invitations; we only touch the row we just created.
-    await createAdminClient().from("invitations").update({ status: "revoked" }).eq("id", inserted.data.id);
-    return { ok: false, message: "Clerk a refuzat invitația (poate există deja una în Clerk)." };
-  }
-
-  revalidatePath("/admin/invitations");
-  return { ok: true, message: `Invitație trimisă către ${email}.` };
+  // 4. Insert (RLS decides) + Clerk invitation, rolled back if Clerk refuses.
+  const result = await sendInvitation(actor, { email, role, departmentId });
+  if (result.ok) revalidatePath("/admin/invitations");
+  return result;
 }
 
 // Revoke a pending invitation. Database first (revoke_invitation() checks who may and
