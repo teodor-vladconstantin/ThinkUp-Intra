@@ -144,7 +144,7 @@ async function seed(tx: SQL) {
 
   const [p1] = await tx`insert into projects (name, description, created_by, challenge_id) values ('[MOCK] Aplicație de mediu', 'Proiect de test 1.', 'mock_stud_1', ${past.id}) returning id`;
   const [p2] = await tx`insert into projects (name, description, created_by, challenge_id) values ('[MOCK] Robot de sortare', 'Proiect de test 2.', 'mock_stud_2', ${open.id}) returning id`;
-  const [p3] = await tx`insert into projects (name, description, created_by, accept_reviews) values ('[MOCK] Proiect fără feedback', 'Nu acceptă feedback.', 'mock_stud_3', false) returning id`;
+  await tx`insert into projects (name, description, created_by, accept_reviews) values ('[MOCK] Proiect fără feedback', 'Nu acceptă feedback.', 'mock_stud_3', false)`;
   await tx`insert into project_members (project_id, profile_id) values (${p1.id}, 'mock_stud_3')`;
 
   for (const [pid, g, prog, off] of [

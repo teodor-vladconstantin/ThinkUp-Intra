@@ -134,7 +134,8 @@ console.table(rows.filter((r) => r.result === "FAIL"));
 const by = new Map<string, { pass: number; fail: number }>();
 for (const r of rows) {
   const c = by.get(r.persona) ?? { pass: 0, fail: 0 };
-  r.result === "PASS" ? c.pass++ : c.fail++;
+  if (r.result === "PASS") c.pass++;
+  else c.fail++;
   by.set(r.persona, c);
 }
 console.table([...by].map(([persona, c]) => ({ persona, pass: c.pass, fail: c.fail })));
