@@ -164,7 +164,7 @@ insert into rls_results (persona, check_name, expected, actual) values
 insert into rls_results (persona, check_name, expected, actual) values
   ('secretary', 'tasks: update Tech task (not creator/assignee)', 'denied', pg_temp.try($q$update tasks set status = 'done' where id = '00000000-0000-0000-0000-000000000001'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('secretary', 'invitations: create', 'denied', pg_temp.try($q$insert into invitations (email, role, invited_by) values ('w6@think-up.academy', 'ceo', 'rls_secretary')$q$));
+  ('secretary', 'invitations: create (any staff role)', 'ok', pg_temp.try($q$insert into invitations (email, role, invited_by) values ('w6@think-up.academy', 'ceo', 'rls_secretary')$q$));
 reset role;
 
 -- =====================================================================
