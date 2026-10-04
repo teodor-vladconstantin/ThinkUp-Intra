@@ -5,3 +5,5 @@
 .next
 node_modules
 supabase/.temp
+# Local Claude session transcripts
+/*-pastedcontent-*.txt
