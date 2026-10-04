@@ -46,11 +46,12 @@ export default async function InvitationsPage() {
       <div className="space-y-3">
         <SectionLabel>Administrare</SectionLabel>
         <h1 className="text-2xl font-semibold">Invitații</h1>
-        {isVpOnly && (
-          <p className="text-sm text-muted-foreground">
-            Ca VP poți invita doar mentori în departamentul tău. Elevii ambasadori se invită din fișa lor, în Program Național.
-          </p>
-        )}
+        {isVpOnly && <p className="text-sm text-muted-foreground">Ca VP poți invita doar mentori în departamentul tău.</p>}
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Aici inviți membrii organizației (board și mentori). <strong>Elevii ambasadori</strong> nu apar în lista de roluri: ei se invită
+          din fișa lor, în Program Național → Licee → liceul lor → „Invită pe platformă”, și pot face asta doar membrii departamentului PN,
+          CEO și Președintele.
+        </p>
       </div>
 
       {roles.length > 0 && (
