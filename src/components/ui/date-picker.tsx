@@ -141,7 +141,7 @@ function DatePicker({ name, value: controlled, defaultValue = "", onValueChange,
           aria-label={rest["aria-label"]}
           data-slot="date-picker-trigger"
           className={cn(
-            "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-left text-base outline-none transition-colors md:text-sm",
+            "flex h-8 max-md:h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-left text-base outline-none transition-colors md:text-sm",
             "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:border-ring disabled:cursor-not-allowed disabled:opacity-50",
             !shown && "text-muted-foreground",
             className
