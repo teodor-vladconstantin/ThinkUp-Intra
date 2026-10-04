@@ -11,6 +11,7 @@ export type Profile = Actor & {
   fullName: string | null;
   departmentName: string | null;
   canAccessPn: boolean;
+  canAccessPlatform: boolean; // ambassadors + anyone with PN access (has_platform_access in SQL)
 };
 
 // "student" is set by the intranet layout, not here: students have a valid profile.
@@ -50,7 +51,7 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
 
   const existing = await db.from("profiles").select(PROFILE_COLUMNS).eq("clerk_id", userId).maybeSingle();
   if (existing.error) throw new Error("Could not load profile");
-  if (existing.data) return toResult(existing.data as unknown as ProfileRow);
+  if (existing.data) return toResult(db, existing.data as unknown as ProfileRow);
 
   // --- First sign-in: create the profile from the pending invitation ---
   const user = await currentUser();
@@ -97,11 +98,15 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
 
   const created = await db.from("profiles").select(PROFILE_COLUMNS).eq("clerk_id", userId).single();
   if (created.error) throw new Error("Could not load profile");
-  return toResult(created.data as unknown as ProfileRow);
+  return toResult(db, created.data as unknown as ProfileRow);
 });
 
-function toResult(row: ProfileRow): ProfileResult {
+async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRow): Promise<ProfileResult> {
   if (!row.is_active) return { status: "no-access", reason: "inactive" };
+  // Being an ambassador lives on the PN side (ambassadors.profile_id); the SQL function
+  // answers for this one profile only.
+  const platform = await db.rpc("has_platform_access", { p_id: row.clerk_id });
+  if (platform.error) throw new Error("Could not check platform access");
   const actor: Actor = { role: row.role, departmentId: row.department_id, isSuperadmin: row.is_superadmin };
   return {
     status: "ok",
@@ -112,6 +117,7 @@ function toResult(row: ProfileRow): ProfileResult {
       fullName: row.full_name,
       departmentName: row.departments?.name ?? null,
       canAccessPn: canAccessPn(actor, row.departments?.can_access_pn ?? false),
+      canAccessPlatform: platform.data === true,
     },
   };
 }

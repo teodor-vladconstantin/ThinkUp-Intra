@@ -8,7 +8,7 @@ const HINTS: Record<NoAccessReason, string> = {
   inactive: "Contul tău a fost dezactivat.",
   "email-unverified": "Adresa de email nu este verificată.",
   domain: `Intranetul acceptă doar adrese ${ALLOWED_EMAIL_HINT}.`,
-  student: "Platforma ambasadorilor nu este încă disponibilă.",
+  student: "Contul tău nu este legat încă de o fișă de ambasador.",
   "no-invitation": "Nu am găsit o invitație activă pentru contul tău.",
 };
 
