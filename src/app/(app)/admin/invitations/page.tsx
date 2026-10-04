@@ -49,8 +49,8 @@ export default async function InvitationsPage() {
         {isVpOnly && <p className="text-sm text-muted-foreground">Ca VP poți invita doar mentori în departamentul tău.</p>}
         <p className="max-w-2xl text-sm text-muted-foreground">
           Aici inviți membrii organizației (board și mentori). <strong>Elevii ambasadori</strong> nu apar în lista de roluri: ei se invită
-          din fișa lor, în Program Național → Licee → liceul lor → „Invită pe platformă”, și pot face asta doar membrii departamentului PN,
-          CEO și Președintele.
+          din fișa lor, în Program Național → Licee → liceul lor → „Invită pe platformă”, și pot face asta doar membrii departamentului PN
+          (și superadminul).
         </p>
       </div>
 
