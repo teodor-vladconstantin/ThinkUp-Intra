@@ -69,3 +69,31 @@ export function canAccessPn(a: Actor, deptCanAccessPn: boolean) {
     deptCanAccessPn
   );
 }
+
+// ---------- tasks ----------
+
+export type TaskRef = {
+  creatorId: string;
+  assigneeId: string | null;
+  departmentId: number | null;
+  requestingDepartmentId: number | null;
+};
+
+// Mirrors tasks_insert: CD creates in any department, a mentor only in their own.
+export function canCreateTaskIn(a: Actor, departmentId: number | null) {
+  return isCd(a) || (departmentId !== null && departmentId === a.departmentId);
+}
+
+// Mirrors tasks_update.
+export function canEditTask(a: Actor & { clerkId: string }, t: TaskRef) {
+  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return true;
+  if (t.creatorId === a.clerkId || t.assigneeId === a.clerkId) return true;
+  return (
+    a.role === "vp" &&
+    a.departmentId !== null &&
+    (t.departmentId === a.departmentId || t.requestingDepartmentId === a.departmentId)
+  );
+}
+
+// Mirrors the tasks_guard trigger: only CD moves a task between departments.
+export const canMoveTask = isCd;

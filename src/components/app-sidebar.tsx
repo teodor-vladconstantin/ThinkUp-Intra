@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   FileText,
+  KanbanSquare,
+  TriangleAlert,
   LayoutDashboard,
   ListChecks,
   Map,
@@ -24,7 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { canSeeInvitations, ROLE_LABELS, type Actor, type AppRole } from "@/lib/permissions";
+import { canSeeInvitations, isCd, ROLE_LABELS, type Actor, type AppRole } from "@/lib/permissions";
 
 // Only plain data crosses the server -> client boundary (no functions, no secrets).
 export type SidebarUser = Actor & {
@@ -44,7 +46,9 @@ type NavItem = {
 // Role-aware navigation. Hiding a link is only UX: every page re-checks on the server.
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Acasă", icon: LayoutDashboard, visible: () => true },
-  { href: "/tasks", label: "Sarcini", icon: ListChecks, visible: () => true, soon: true },
+  { href: "/tasks", label: "Sarcini", icon: ListChecks, visible: () => true },
+  { href: "/board", label: "Board", icon: KanbanSquare, visible: () => true },
+  { href: "/leadership", label: "Întârzieri", icon: TriangleAlert, visible: isCd },
   { href: "/meetings", label: "Ședințe", icon: CalendarDays, visible: () => true, soon: true },
   { href: "/documents", label: "Documente", icon: FileText, visible: () => true, soon: true },
   { href: "/announcements", label: "Anunțuri", icon: Megaphone, visible: () => true, soon: true },

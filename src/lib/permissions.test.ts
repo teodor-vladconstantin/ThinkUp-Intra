@@ -1,6 +1,15 @@
 // Run with: bun test
 import { describe, expect, test } from "bun:test";
-import { canAccessPn, canInvite, invitableRoles, isAllowedEmail, type Actor } from "./permissions";
+import {
+  canAccessPn,
+  canCreateTaskIn,
+  canEditTask,
+  canInvite,
+  canMoveTask,
+  invitableRoles,
+  isAllowedEmail,
+  type Actor,
+} from "./permissions";
 
 const TECH = 1;
 const PN = 3;
@@ -38,4 +47,30 @@ test("canAccessPn: CD leadership yes, Tech mentor no unless flag", () => {
   expect(canAccessPn(secretary, false)).toBe(true);
   expect(canAccessPn(mentorTech, false)).toBe(false);
   expect(canAccessPn(mentorTech, true)).toBe(true);
+});
+
+describe("tasks", () => {
+  const task = { creatorId: "vp_tech", assigneeId: "mentor_tech", departmentId: TECH, requestingDepartmentId: null };
+  const asUser = (a: Actor, clerkId: string) => ({ ...a, clerkId });
+
+  test("mentor creates only in own department, CD anywhere", () => {
+    expect(canCreateTaskIn(mentorTech, TECH)).toBe(true);
+    expect(canCreateTaskIn(mentorTech, PN)).toBe(false);
+    expect(canCreateTaskIn(vpTech, PN)).toBe(true);
+    expect(canCreateTaskIn(secretary, PN)).toBe(true);
+  });
+
+  test("edit: assignee, creator, VP of the department; not the secretary", () => {
+    expect(canEditTask(asUser(mentorTech, "mentor_tech"), task)).toBe(true);
+    expect(canEditTask(asUser(mentorTech, "other_mentor"), task)).toBe(false);
+    expect(canEditTask(asUser(vpTech, "some_vp"), task)).toBe(true);
+    expect(canEditTask(asUser({ role: "vp", departmentId: PN, isSuperadmin: false }, "vp_pn"), task)).toBe(false);
+    expect(canEditTask(asUser(secretary, "sec"), task)).toBe(false);
+    expect(canEditTask(asUser(ceo, "ceo"), task)).toBe(true);
+  });
+
+  test("only CD moves tasks between departments", () => {
+    expect(canMoveTask(mentorTech)).toBe(false);
+    expect(canMoveTask(vpTech)).toBe(true);
+  });
 });

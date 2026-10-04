@@ -1,0 +1,7 @@
+# Never upload local secrets or tooling state. Env vars are set in the Vercel project instead.
+.env*
+!.env.example
+.claude
+.next
+node_modules
+supabase/.temp

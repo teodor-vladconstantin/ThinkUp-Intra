@@ -1,14 +1,14 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-// Next.js 16 renamed middleware.ts to proxy.ts; Clerk's clerkMiddleware works the same.
-// This is only the first, optimistic layer: it sends signed-out visitors to /sign-in.
-// Real authorization (active profile, role) happens on the server in getCurrentProfile()
-// and in every server action, and finally in Postgres through RLS.
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
-});
+// Next.js 16 renamed middleware.ts to proxy.ts. clerkMiddleware() only makes the Clerk
+// session available to auth() on the server; it does NOT decide who may see what.
+//
+// Authorization lives next to the data, as Clerk now recommends (path matching in a proxy
+// can drift from how Next routes requests):
+//   - (app)/layout.tsx: signed-out -> /sign-in, no active profile -> "Nu ai acces"
+//   - every server action: requireProfile()
+//   - Postgres RLS on every query made with the user client
+export default clerkMiddleware();
 
 export const config = {
   matcher: [
