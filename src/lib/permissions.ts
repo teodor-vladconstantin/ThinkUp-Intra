@@ -50,15 +50,21 @@ export function isCd(a: Actor) {
   return a.isSuperadmin || ["ceo", "president", "secretary", "vp"].includes(a.role);
 }
 
-// Mirrors inv_read.
-export function canSeeInvitations(a: Actor) {
-  return a.isSuperadmin || a.role === "ceo" || a.role === "president" || a.role === "vp";
+// Superadmin, CEO, President and Secretary invite any staff role; VP only mentors below.
+function isInviteAdmin(a: Actor) {
+  return a.isSuperadmin || a.role === "ceo" || a.role === "president" || a.role === "secretary";
 }
 
-// Mirrors inv_insert: superadmin/CEO/President invite anyone, a VP invites only
-// mentors into their own department, the PN department invites students.
+// Mirrors inv_read.
+export function canSeeInvitations(a: Actor) {
+  return isInviteAdmin(a) || a.role === "vp";
+}
+
+// Mirrors inv_insert: superadmin/CEO/President/Secretary invite any staff role,
+// a VP only mentors into their own department, the PN department invites students.
 export function canInvite(a: Actor & MaybeDept, target: { role: AppRole; departmentId: number | null }) {
-  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return true;
+  if (a.isSuperadmin) return true;
+  if (isInviteAdmin(a)) return target.role !== "student";
   if (target.role === "student") return isPnMember(a);
   return (
     a.role === "vp" &&
@@ -71,7 +77,7 @@ export function canInvite(a: Actor & MaybeDept, target: { role: AppRole; departm
 // Roles the actor may pick in the admin invitation form. Students are never invited
 // there: PN invites them from the ambassador's record, so the account gets linked.
 export function invitableRoles(a: Actor & MaybeDept): AppRole[] {
-  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return ROLES.filter((r) => r !== "student");
+  if (isInviteAdmin(a)) return ROLES.filter((r) => r !== "student");
   return a.role === "vp" ? ["mentor"] : [];
 }
 
