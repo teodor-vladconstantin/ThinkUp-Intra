@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AnnouncementBanner } from "@/components/announcements/announcement-banner";
 import { SectionLabel } from "@/components/section-label";
 import { AlertBadge, AlertBanner } from "@/components/tasks/alert-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { activeAnnouncements } from "@/lib/announcements";
 import { requireProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import { createUserClient } from "@/lib/supabase/server";
@@ -14,8 +16,12 @@ export default async function DashboardPage() {
   if (!profile) redirect("/sign-in");
   const firstName = profile.fullName?.split(" ")[0];
 
-  // Open tasks assigned to me; the banner counts come from the same rows.
-  const mine = (await listTasks(createUserClient(), (q) => q.eq("assignee_id", profile.clerkId).neq("status", "done")));
+  // Open tasks assigned to me (the alert banner counts come from the same rows) + active announcements.
+  const db = createUserClient();
+  const [mine, announcements] = await Promise.all([
+    listTasks(db, (q) => q.eq("assignee_id", profile.clerkId).neq("status", "done")),
+    activeAnnouncements(db),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -24,12 +30,14 @@ export default async function DashboardPage() {
         <h1 className="font-display text-4xl italic">Bună{firstName ? `, ${firstName}` : ""}!</h1>
       </div>
 
+      <AnnouncementBanner items={announcements} />
+
       <AlertBanner
         overdue={mine.filter((t) => t.alert === "overdue").length}
         dueSoon={mine.filter((t) => t.alert === "due_soon").length}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Sarcinile mele</CardTitle>
@@ -56,12 +64,6 @@ export default async function DashboardPage() {
               </ul>
             )}
           </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Anunțuri</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Niciun anunț activ.</CardContent>
         </Card>
       </div>
     </div>

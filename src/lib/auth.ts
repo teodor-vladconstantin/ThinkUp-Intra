@@ -3,6 +3,7 @@ import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canAccessPn, isAllowedEmail, type Actor, type AppRole } from "@/lib/permissions";
+import { escapeLike } from "@/lib/utils";
 
 export type Profile = Actor & {
   clerkId: string;
@@ -59,9 +60,8 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
   const email = primary.emailAddress.toLowerCase();
   if (!isAllowedEmail(email)) return { status: "no-access", reason: "domain" };
 
-  // Case-insensitive exact match. ilike treats % and _ as wildcards, so escape them
-  // (an email can legally contain "_").
-  const pattern = email.replace(/[\\%_]/g, (c) => `\\${c}`);
+  // Case-insensitive exact match: ilike with its wildcards escaped ("_" is legal in emails).
+  const pattern = escapeLike(email);
   const invitation = await db
     .from("invitations")
     .select("id, role, department_id")

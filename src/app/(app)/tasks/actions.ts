@@ -57,6 +57,13 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
   const db = createUserClient();
   if (!(await assigneeIsActive(db, f.assigneeId))) return { ok: false, message: "Persoana aleasă nu are un cont activ." };
 
+  // Optional link to a meeting: only a meeting this user can see (RLS on meetings).
+  const meetingId = uuid.safeParse(formData.get("meetingId"));
+  if (meetingId.success) {
+    const { data: meeting } = await db.from("meetings").select("id").eq("id", meetingId.data).maybeSingle();
+    if (!meeting) return { ok: false, message: "Ședința nu există sau nu ai acces la ea." };
+  }
+
   const { data, error } = await db
     .from("tasks")
     .insert({
@@ -68,6 +75,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       creator_id: actor.clerkId,
       department_id: f.departmentId,
       requesting_department_id: requestingDepartmentFor(actor, f.departmentId),
+      meeting_id: meetingId.success ? meetingId.data : null,
     })
     .select("id")
     .single();

@@ -6,6 +6,7 @@ import {
   canEditTask,
   canInvite,
   canMoveTask,
+  canWriteMeeting,
   invitableRoles,
   isAllowedEmail,
   type Actor,
@@ -72,5 +73,16 @@ describe("tasks", () => {
   test("only CD moves tasks between departments", () => {
     expect(canMoveTask(mentorTech)).toBe(false);
     expect(canMoveTask(vpTech)).toBe(true);
+  });
+});
+
+describe("meetings", () => {
+  test("CD minutes: secretary only; department minutes: that VP only", () => {
+    expect(canWriteMeeting(secretary, "cd", null)).toBe(true);
+    expect(canWriteMeeting(vpTech, "cd", null)).toBe(false);
+    expect(canWriteMeeting(vpTech, "department", TECH)).toBe(true);
+    expect(canWriteMeeting(vpTech, "department", PN)).toBe(false);
+    expect(canWriteMeeting(secretary, "department", TECH)).toBe(false);
+    expect(canWriteMeeting(superadmin, "department", PN)).toBe(true);
   });
 });

@@ -97,3 +97,28 @@ export function canEditTask(a: Actor & { clerkId: string }, t: TaskRef) {
 
 // Mirrors the tasks_guard trigger: only CD moves a task between departments.
 export const canMoveTask = isCd;
+
+// ---------- meetings, documents, announcements ----------
+
+export type MeetingKind = "cd" | "department";
+
+// Mirrors meetings_write / meetings_update / decisions_write:
+// CD minutes by the Secretary, department minutes by that department's VP.
+export function canWriteMeeting(a: Actor, kind: MeetingKind, departmentId: number | null) {
+  if (a.isSuperadmin) return true;
+  if (kind === "cd") return a.role === "secretary";
+  return a.role === "vp" && departmentId !== null && departmentId === a.departmentId;
+}
+
+// Mirrors docs_write.
+export const canCreateDocument = isCd;
+
+// Mirrors ann_write.
+export function canPostAnnouncement(a: Actor) {
+  return a.isSuperadmin || a.role === "ceo" || a.role === "president" || a.role === "vp";
+}
+
+// Mirrors docs_update / ann_update: the author (or superadmin) archives their own item.
+export function canManageOwn(a: Actor & { clerkId: string }, authorId: string | null) {
+  return a.isSuperadmin || (authorId !== null && authorId === a.clerkId);
+}

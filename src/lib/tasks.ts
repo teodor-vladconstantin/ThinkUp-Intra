@@ -24,7 +24,8 @@ export const TASK_SELECT = `
   assignee:profiles!assignee_id(full_name, is_active),
   creator:profiles!creator_id(full_name),
   department:departments!department_id(name),
-  requesting:departments!requesting_department_id(name)
+  requesting:departments!requesting_department_id(name),
+  meeting:meetings(id, title)
 `;
 
 export type Task = {
@@ -47,6 +48,8 @@ export type Task = {
   creator: { full_name: string | null } | null;
   department: { name: string } | null;
   requesting: { name: string } | null;
+  // null while meeting_id is set = the meeting exists but RLS hides it from this viewer
+  meeting: { id: string; title: string } | null;
 };
 
 // PRD 4: a deactivated user's open tasks show as unassigned.

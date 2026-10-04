@@ -20,6 +20,7 @@ type Defaults = {
   deadline?: string; // YYYY-MM-DD
   assigneeId?: string | null;
   departmentId?: number | null;
+  meetingId?: string;
 };
 
 // One form for create and edit. Department choices are already filtered on the server
@@ -47,6 +48,7 @@ export function TaskForm({
   return (
     <form action={formAction} className="grid gap-4">
       {defaults.id && <input type="hidden" name="id" value={defaults.id} />}
+      {defaults.meetingId && <input type="hidden" name="meetingId" value={defaults.meetingId} />}
 
       <div className="grid gap-1.5">
         <Label htmlFor="title">Titlu</Label>

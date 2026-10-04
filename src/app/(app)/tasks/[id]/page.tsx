@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { SectionLabel } from "@/components/section-label";
@@ -75,6 +76,17 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
                 <Field label="Cerut de">{task.requesting?.name ?? "—"}</Field>
                 <Field label="Creată de">{task.creator?.full_name ?? "—"}</Field>
                 {task.completed_at && <Field label="Finalizată">{formatDate(task.completed_at)}</Field>}
+                {task.meeting_id && (
+                  <Field label="Din ședința">
+                    {task.meeting ? (
+                      <Link href={`/meetings/${task.meeting.id}`} className="text-primary hover:underline">
+                        {task.meeting.title}
+                      </Link>
+                    ) : (
+                      "Ședință (acces restricționat)"
+                    )}
+                  </Field>
+                )}
               </dl>
             </CardContent>
           </Card>

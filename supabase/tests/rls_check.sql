@@ -91,7 +91,7 @@ insert into rls_results (persona, check_name, expected, actual) values
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_tech', 'tasks: update PN task', 'denied', pg_temp.try($q$update tasks set status = 'done' where id = '00000000-0000-0000-0000-000000000002'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_tech', 'meetings: create Tech meeting', 'denied', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at) values ('department', (select id from departments where name = 'Tech'), 'W m', now())$q$));
+  ('mentor_tech', 'meetings: create Tech meeting', 'denied', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at, author_id) values ('department', (select id from departments where name = 'Tech'), 'W m', now(), 'rls_mentor_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_tech', 'invitations: create', 'denied', pg_temp.try($q$insert into invitations (email, role, department_id, invited_by) values ('w1@think-up.academy', 'mentor', (select id from departments where name = 'Tech'), 'rls_mentor_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
@@ -112,11 +112,11 @@ insert into rls_results (persona, check_name, expected, actual) values
 insert into rls_results (persona, check_name, expected, actual) values
   ('vp_tech', 'tasks: create for PN (cross-dept)', 'ok', pg_temp.try($q$insert into tasks (title, creator_id, department_id, requesting_department_id) values ('W vp cross', 'rls_vp_tech', (select id from departments where name = 'PN'), (select id from departments where name = 'Tech'))$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('vp_tech', 'meetings: create Tech meeting', 'ok', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at) values ('department', (select id from departments where name = 'Tech'), 'W m', now())$q$));
+  ('vp_tech', 'meetings: create Tech meeting', 'ok', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at, author_id) values ('department', (select id from departments where name = 'Tech'), 'W m', now(), 'rls_vp_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('vp_tech', 'meetings: create PN meeting', 'denied', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at) values ('department', (select id from departments where name = 'PN'), 'W m', now())$q$));
+  ('vp_tech', 'meetings: create PN meeting', 'denied', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at, author_id) values ('department', (select id from departments where name = 'PN'), 'W m', now(), 'rls_vp_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('vp_tech', 'meetings: create CD meeting', 'denied', pg_temp.try($q$insert into meetings (kind, title, held_at) values ('cd', 'W m', now())$q$));
+  ('vp_tech', 'meetings: create CD meeting', 'denied', pg_temp.try($q$insert into meetings (kind, title, held_at, author_id) values ('cd', 'W m', now(), 'rls_vp_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('vp_tech', 'invitations: mentor into Tech', 'ok', pg_temp.try($q$insert into invitations (email, role, department_id, invited_by) values ('w2@think-up.academy', 'mentor', (select id from departments where name = 'Tech'), 'rls_vp_tech')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
@@ -143,7 +143,7 @@ insert into rls_results (persona, check_name, expected, actual) values
 insert into rls_results (persona, check_name, expected, actual) values
   ('vp_pn', 'ambassador_contacts: update', 'ok', pg_temp.try($q$update ambassador_contacts set phone = '0711111111' where ambassador_id = 900001$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('vp_pn', 'meetings: create PN meeting', 'ok', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at) values ('department', (select id from departments where name = 'PN'), 'W m', now())$q$));
+  ('vp_pn', 'meetings: create PN meeting', 'ok', pg_temp.try($q$insert into meetings (kind, department_id, title, held_at, author_id) values ('department', (select id from departments where name = 'PN'), 'W m', now(), 'rls_vp_pn')$q$));
 reset role;
 
 -- =====================================================================
@@ -158,7 +158,7 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('secretary', 'schools: read',                       '1', pg_temp.cnt($q$select 1 from schools where name like 'RLS %'$q$)),
   ('secretary', 'ambassador_contacts: read',           '0', pg_temp.cnt($q$select 1 from ambassador_contacts$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('secretary', 'meetings: create CD meeting', 'ok', pg_temp.try($q$insert into meetings (kind, title, held_at) values ('cd', 'W m', now())$q$));
+  ('secretary', 'meetings: create CD meeting', 'ok', pg_temp.try($q$insert into meetings (kind, title, held_at, author_id) values ('cd', 'W m', now(), 'rls_secretary')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('secretary', 'schools: create', 'denied', pg_temp.try($q$insert into schools (name, county_code) values ('W school', 'CJ')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
