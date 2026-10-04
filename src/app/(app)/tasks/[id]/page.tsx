@@ -76,6 +76,19 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
                 <Field label="Cerut de">{task.requesting?.name ?? "—"}</Field>
                 <Field label="Creată de">{task.creator?.full_name ?? "—"}</Field>
                 {task.completed_at && <Field label="Finalizată">{formatDate(task.completed_at)}</Field>}
+                {task.school_id && (
+                  <Field label="Liceu">
+                    {task.school ? (
+                      <Link href={`/pn/schools/${task.school.id}`} className="text-primary hover:underline">
+                        {task.school.name}
+                      </Link>
+                    ) : (
+                      "Școală (acces restricționat)"
+                    )}
+                  </Field>
+                )}
+                {task.county_code && <Field label="Județ">{task.county?.name ?? "Județ (acces restricționat)"}</Field>}
+                {task.zone_id && <Field label="Zonă">{task.zone?.name ?? "Zonă (acces restricționat)"}</Field>}
                 {task.meeting_id && (
                   <Field label="Din ședința">
                     {task.meeting ? (
@@ -119,6 +132,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
                   departments={options.departments}
                   people={options.people}
                   canChangeDepartment={canMoveTask(profile)}
+                  pn={options.pn}
                   submitLabel="Salvează"
                   defaults={{
                     id: task.id,
@@ -128,6 +142,9 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
                     deadline: task.deadline ? dateInputValue(task.deadline) : undefined,
                     assigneeId: task.assignee_id,
                     departmentId: task.department_id,
+                    schoolId: task.school_id,
+                    countyCode: task.county_code,
+                    zoneId: task.zone_id,
                   }}
                 />
                 <form action={archiveTask} className="border-t pt-4">

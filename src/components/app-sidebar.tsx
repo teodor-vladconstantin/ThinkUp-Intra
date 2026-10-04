@@ -54,7 +54,7 @@ const NAV: NavItem[] = [
   { href: "/decisions", label: "Decizii", icon: Gavel, visible: () => true },
   { href: "/documents", label: "Documente", icon: FileText, visible: () => true },
   { href: "/announcements", label: "Anunțuri", icon: Megaphone, visible: () => true },
-  { href: "/pn", label: "Program Național", icon: Map, visible: (u) => u.canAccessPn, soon: true },
+  { href: "/pn", label: "Program Național", icon: Map, visible: (u) => u.canAccessPn },
   { href: "/admin/invitations", label: "Invitații", icon: UserPlus, visible: canSeeInvitations },
 ];
 

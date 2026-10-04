@@ -27,6 +27,20 @@ const taskFields = z.object({
 
 const uuid = z.uuid();
 
+// PN links are only applied when the form actually sent them (users with PN access).
+// Someone without PN access editing a linked task must not wipe the link by omission.
+const pnLinkFields = z.object({
+  schoolId: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
+  countyCode: z.preprocess(emptyToUndefined, z.string().regex(/^[A-Z]{1,2}$/).optional()),
+  zoneId: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
+});
+function pnLinks(formData: FormData) {
+  if (formData.get("pnLinks") !== "1") return {};
+  const p = pnLinkFields.safeParse(Object.fromEntries(formData));
+  if (!p.success) return {};
+  return { school_id: p.data.schoolId ?? null, county_code: p.data.countyCode ?? null, zone_id: p.data.zoneId ?? null };
+}
+
 // Refresh every page: banners in the layout depend on any task change.
 const refreshAll = () => revalidatePath("/", "layout");
 
@@ -76,6 +90,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       department_id: f.departmentId,
       requesting_department_id: requestingDepartmentFor(actor, f.departmentId),
       meeting_id: meetingId.success ? meetingId.data : null,
+      ...pnLinks(formData),
     })
     .select("id")
     .single();
@@ -124,6 +139,7 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
       deadline: f.deadline ? deadlineFromDate(f.deadline) : null,
       assignee_id: f.assigneeId ?? null,
       department_id: f.departmentId,
+      ...pnLinks(formData),
     })
     .eq("id", id.data)
     .select("id");

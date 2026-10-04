@@ -20,12 +20,15 @@ export const PRIORITY_LABELS: Record<number, string> = { 1: "Mare", 2: "Normală
 // follow, since tasks points at profiles (and departments) more than once.
 export const TASK_SELECT = `
   id, title, description, status, priority, deadline, alert, archived, completed_at, created_at,
-  creator_id, assignee_id, department_id, requesting_department_id, meeting_id,
+  creator_id, assignee_id, department_id, requesting_department_id, meeting_id, school_id, county_code, zone_id,
   assignee:profiles!assignee_id(full_name, is_active),
   creator:profiles!creator_id(full_name),
   department:departments!department_id(name),
   requesting:departments!requesting_department_id(name),
-  meeting:meetings(id, title)
+  meeting:meetings(id, title),
+  school:schools(id, name),
+  county:counties(code, name),
+  zone:zones(id, name)
 `;
 
 export type Task = {
@@ -50,6 +53,13 @@ export type Task = {
   requesting: { name: string } | null;
   // null while meeting_id is set = the meeting exists but RLS hides it from this viewer
   meeting: { id: string; title: string } | null;
+  school_id: number | null;
+  county_code: string | null;
+  zone_id: number | null;
+  // Same rule as meeting: an id with a null embed means RLS hides it (no PN access, PRD 6.2).
+  school: { id: number; name: string } | null;
+  county: { code: string; name: string } | null;
+  zone: { id: number; name: string } | null;
 };
 
 // PRD 4: a deactivated user's open tasks show as unassigned.

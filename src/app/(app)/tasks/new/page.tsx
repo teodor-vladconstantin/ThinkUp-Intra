@@ -15,7 +15,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   if (!profile) redirect("/sign-in");
 
   const db = createUserClient();
-  const { departments, people } = await loadTaskFormOptions(db, profile);
+  const { departments, people, pn } = await loadTaskFormOptions(db, profile);
 
   const meetingParam = z.uuid().safeParse((await props.searchParams).meeting);
   const meeting = meetingParam.success
@@ -40,6 +40,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
               meetingId: meeting?.id,
             }}
             canChangeDepartment={canMoveTask(profile)}
+            pn={pn}
             submitLabel="Creează sarcina"
           />
         </CardContent>

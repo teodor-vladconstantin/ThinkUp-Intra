@@ -11,6 +11,11 @@ export const selectClass =
   "h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60";
 
 export type Person = { clerk_id: string; full_name: string | null; department_id: number | null };
+export type PnOptions = {
+  schools: { id: number; name: string }[];
+  counties: { code: string; name: string }[];
+  zones: { id: number; name: string }[];
+};
 
 type Defaults = {
   id?: string;
@@ -21,6 +26,9 @@ type Defaults = {
   assigneeId?: string | null;
   departmentId?: number | null;
   meetingId?: string;
+  schoolId?: number | null;
+  countyCode?: string | null;
+  zoneId?: number | null;
 };
 
 // One form for create and edit. Department choices are already filtered on the server
@@ -33,6 +41,7 @@ export function TaskForm({
   defaults = {},
   canChangeDepartment,
   submitLabel,
+  pn = null,
 }: {
   action: (prev: FormState, data: FormData) => Promise<FormState>;
   departments: { id: number; name: string }[];
@@ -40,6 +49,7 @@ export function TaskForm({
   defaults?: Defaults;
   canChangeDepartment: boolean;
   submitLabel: string;
+  pn?: PnOptions | null; // only for users with PN access
 }) {
   const [state, formAction, pending] = useActionState(action, null);
   const [departmentId, setDepartmentId] = useState<number | null>(defaults.departmentId ?? departments[0]?.id ?? null);
@@ -120,6 +130,38 @@ export function TaskForm({
           </select>
         </div>
       </div>
+
+      {pn && (
+        <fieldset className="grid gap-4 sm:grid-cols-3">
+          <legend className="mb-1 text-sm font-medium">Legătură Program Național (opțional)</legend>
+          {/* Marker: tells the action this form sends PN links, so it may change them. */}
+          <input type="hidden" name="pnLinks" value="1" />
+          <select name="schoolId" aria-label="Liceu" className={selectClass} defaultValue={defaults.schoolId ?? ""}>
+            <option value="">Fără liceu</option>
+            {pn.schools.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select name="countyCode" aria-label="Județ" className={selectClass} defaultValue={defaults.countyCode ?? ""}>
+            <option value="">Fără județ</option>
+            {pn.counties.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select name="zoneId" aria-label="Zonă" className={selectClass} defaultValue={defaults.zoneId ?? ""}>
+            <option value="">Fără zonă</option>
+            {pn.zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      )}
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>

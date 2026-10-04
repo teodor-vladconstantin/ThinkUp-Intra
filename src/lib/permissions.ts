@@ -122,3 +122,18 @@ export function canPostAnnouncement(a: Actor) {
 export function canManageOwn(a: Actor & { clerkId: string }, authorId: string | null) {
   return a.isSuperadmin || (authorId !== null && authorId === a.clerkId);
 }
+
+// ---------- National Program ----------
+
+type WithDepartment = Actor & { departmentName: string | null };
+
+// Mirrors is_pn_dept(): membership of the PN department itself (not the can_access_pn flag).
+// Writes schools, contact log, ambassadors; the only ones who see ambassador contacts.
+export function isPnMember(a: WithDepartment) {
+  return a.isSuperadmin || a.departmentName === "PN";
+}
+
+// Mirrors move_county() and zones_insert / zones_update: VP PN or superadmin.
+export function canManageZones(a: WithDepartment) {
+  return a.isSuperadmin || (a.role === "vp" && a.departmentName === "PN");
+}

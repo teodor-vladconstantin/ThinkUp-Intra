@@ -5,10 +5,12 @@ import {
   canCreateTaskIn,
   canEditTask,
   canInvite,
+  canManageZones,
   canMoveTask,
   canWriteMeeting,
   invitableRoles,
   isAllowedEmail,
+  isPnMember,
   type Actor,
 } from "./permissions";
 
@@ -84,5 +86,24 @@ describe("meetings", () => {
     expect(canWriteMeeting(vpTech, "department", PN)).toBe(false);
     expect(canWriteMeeting(secretary, "department", TECH)).toBe(false);
     expect(canWriteMeeting(superadmin, "department", PN)).toBe(true);
+  });
+});
+
+describe("national program", () => {
+  const withDept = (a: Actor, departmentName: string | null) => ({ ...a, departmentName });
+  const vpPn = withDept({ role: "vp", departmentId: PN, isSuperadmin: false }, "PN");
+  const mentorPn = withDept({ role: "mentor", departmentId: PN, isSuperadmin: false }, "PN");
+
+  test("PN membership is the department, not the access flag", () => {
+    expect(isPnMember(mentorPn)).toBe(true);
+    expect(isPnMember(withDept(secretary, null))).toBe(false); // sees the map, not ambassador contacts
+    expect(isPnMember(withDept(mentorTech, "Tech"))).toBe(false);
+  });
+
+  test("only VP PN (and superadmin) manage zones and move counties", () => {
+    expect(canManageZones(vpPn)).toBe(true);
+    expect(canManageZones(mentorPn)).toBe(false);
+    expect(canManageZones(withDept(vpTech, "Tech"))).toBe(false);
+    expect(canManageZones(withDept(superadmin, "Tech"))).toBe(true);
   });
 });
