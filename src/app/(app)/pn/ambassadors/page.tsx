@@ -41,7 +41,7 @@ export default async function AmbassadorsPage(props: PageProps<"/pn/ambassadors"
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Niciun ambasador. Se adaugă din pagina liceului.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="relative overflow-x-auto rounded-xl border bg-card">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">

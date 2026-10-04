@@ -58,8 +58,10 @@ export default async function BoardPage(props: PageProps<"/board">) {
       />
 
       {view === "kanban" ? (
-        // Horizontal scroll on phones, four columns on wide screens.
-        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+        // Horizontal scroll on phones, four columns on wide screens. "relative": the scroller must be
+        // the containing block of the cards' hidden (absolute) elements, or they escape the clipping
+        // and widen the whole page.
+        <div className="relative -mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
           <div className="grid min-w-[56rem] grid-cols-4 gap-4">
             {STATUSES.map((s) => {
               const column = tasks.filter((t) => t.status === s);
@@ -77,7 +79,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="relative overflow-x-auto rounded-xl border bg-card">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
