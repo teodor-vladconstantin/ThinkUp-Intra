@@ -6,6 +6,7 @@ import {
   BookOpen,
   CalendarDays,
   FolderKanban,
+  Images,
   FileText,
   Gavel,
   KanbanSquare,
@@ -75,6 +76,8 @@ const PLATFORM_NAV: NavItem[] = [
   { href: "/platform/challenges", label: "Challenge-uri", icon: Trophy, visible: (u) => u.canAccessPlatform },
   { href: "/platform/open-school", label: "Open School", icon: BookOpen, visible: (u) => u.canAccessPlatform },
   { href: "/platform/me", label: "Profilul meu", icon: UserRound, visible: (u) => u.canAccessPlatform },
+  // Board only: CEO, President, Secretary, every VP, superadmin (is_cd in the database).
+  { href: "/platform/gallery", label: "Galerie", icon: Images, visible: isCd },
 ];
 
 export function AppSidebar({ user }: { user: SidebarUser }) {

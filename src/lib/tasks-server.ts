@@ -14,8 +14,8 @@ export async function loadTaskFormOptions(db: Db, actor: Profile) {
     db.from("profiles").select("clerk_id, full_name, department_id").eq("is_active", true).neq("role", "student").order("full_name"),
     actor.canAccessPn
       ? Promise.all([
-          db.from("schools").select("id, name").order("name"),
-          db.from("counties").select("code, name").order("name"),
+          db.from("schools").select("id, name, county_code").order("name"),
+          db.from("counties").select("code, name, zone_id").order("name"),
           db.from("zones").select("id, name").order("name"),
         ])
       : null,

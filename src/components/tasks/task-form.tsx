@@ -11,8 +11,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 export type Person = { clerk_id: string; full_name: string | null; department_id: number | null };
 export type PnOptions = {
-  schools: { id: number; name: string }[];
-  counties: { code: string; name: string }[];
+  schools: { id: number; name: string; county_code: string }[];
+  counties: { code: string; name: string; zone_id: number | null }[];
   zones: { id: number; name: string }[];
 };
 
@@ -127,24 +127,7 @@ export function TaskForm({
           <legend className="mb-1 text-sm font-medium">Legătură Program Național (opțional)</legend>
           {/* Marker: tells the action this form sends PN links, so it may change them. */}
           <input type="hidden" name="pnLinks" value="1" />
-          <Select
-            name="schoolId"
-            aria-label="Liceu"
-            defaultValue={defaults.schoolId != null ? String(defaults.schoolId) : ""}
-            options={[{ value: "", label: "Fără liceu" }, ...pn.schools.map((s) => ({ value: String(s.id), label: s.name }))]}
-          />
-          <Select
-            name="countyCode"
-            aria-label="Județ"
-            defaultValue={defaults.countyCode ?? ""}
-            options={[{ value: "", label: "Fără județ" }, ...pn.counties.map((c) => ({ value: c.code, label: c.name }))]}
-          />
-          <Select
-            name="zoneId"
-            aria-label="Zonă"
-            defaultValue={defaults.zoneId != null ? String(defaults.zoneId) : ""}
-            options={[{ value: "", label: "Fără zonă" }, ...pn.zones.map((z) => ({ value: String(z.id), label: z.name }))]}
-          />
+          <PnLinkFields pn={pn} defaults={defaults} />
         </fieldset>
       )}
 
@@ -159,5 +142,80 @@ export function TaskForm({
         )}
       </div>
     </form>
+  );
+}
+
+// School -> county -> zone, restrictive on purpose (no impossible combinations):
+//  - a school decides its county and zone (both locked, filled in automatically);
+//  - a county decides its zone (locked);
+//  - picking a zone or a county first narrows the lists below it.
+// The server derives the same way, so a hand-made request cannot break it either.
+function PnLinkFields({ pn, defaults }: { pn: PnOptions; defaults: Defaults }) {
+  const [schoolId, setSchoolId] = useState(defaults.schoolId != null ? String(defaults.schoolId) : "");
+  const [countyCode, setCountyCode] = useState(defaults.countyCode ?? "");
+  const [zoneId, setZoneId] = useState(defaults.zoneId != null ? String(defaults.zoneId) : "");
+
+  const zoneOf = (code: string) => {
+    const z = pn.counties.find((c) => c.code === code)?.zone_id;
+    return z != null ? String(z) : "";
+  };
+
+  function pickSchool(v: string) {
+    setSchoolId(v)
+    const school = pn.schools.find((s) => String(s.id) === v)
+    if (school) {
+      setCountyCode(school.county_code)
+      setZoneId(zoneOf(school.county_code))
+    }
+  }
+  function pickCounty(v: string) {
+    setCountyCode(v)
+    setZoneId(v ? zoneOf(v) : "")
+    const school = pn.schools.find((s) => String(s.id) === schoolId)
+    if (school && school.county_code !== v) setSchoolId("")
+  }
+
+  const countiesInZone = (zone: string) => pn.counties.filter((c) => zone === "" || zoneOf(c.code) === zone)
+  const countyOptions = countiesInZone(zoneId)
+  const schoolOptions = pn.schools.filter((s) => {
+    if (countyCode) return s.county_code === countyCode
+    if (zoneId) return countiesInZone(zoneId).some((c) => c.code === s.county_code)
+    return true
+  })
+
+  const schoolPicked = schoolId !== ""
+  const hint = schoolPicked
+    ? "Județul și zona se completează automat din liceu."
+    : countyCode
+      ? "Zona se completează automat din județ."
+      : "Alege liceul (sau județul / zona, ca să restrângi lista).";
+
+  return (
+    <>
+      <Select
+        name="schoolId"
+        aria-label="Liceu"
+        value={schoolId}
+        onValueChange={pickSchool}
+        options={[{ value: "", label: "Fără liceu" }, ...schoolOptions.map((s) => ({ value: String(s.id), label: s.name }))]}
+      />
+      <Select
+        name="countyCode"
+        aria-label="Județ"
+        value={countyCode}
+        disabled={schoolPicked}
+        onValueChange={pickCounty}
+        options={[{ value: "", label: "Fără județ" }, ...countyOptions.map((c) => ({ value: c.code, label: c.name }))]}
+      />
+      <Select
+        name="zoneId"
+        aria-label="Zonă"
+        value={zoneId}
+        disabled={schoolPicked || countyCode !== ""}
+        onValueChange={setZoneId}
+        options={[{ value: "", label: "Fără zonă" }, ...pn.zones.map((z) => ({ value: String(z.id), label: z.name }))]}
+      />
+      <p className="text-xs text-muted-foreground sm:col-span-3">{hint}</p>
+    </>
   );
 }

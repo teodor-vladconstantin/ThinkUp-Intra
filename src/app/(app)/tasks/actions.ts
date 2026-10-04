@@ -34,11 +34,27 @@ const pnLinkFields = z.object({
   countyCode: z.preprocess(emptyToUndefined, z.string().regex(/^[A-Z]{1,2}$/).optional()),
   zoneId: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
 });
-function pnLinks(formData: FormData) {
-  if (formData.get("pnLinks") !== "1") return {};
+// Keeps school -> county -> zone consistent even if the form was tampered with:
+// the school decides the county, the county decides the zone (the UI locks them the same way).
+async function resolvePnLinks(db: ReturnType<typeof createUserClient>, formData: FormData) {
+  type Links = { school_id?: number | null; county_code?: string | null; zone_id?: number | null };
+  const ok = (fields: Links) => ({ ok: true as const, fields });
+  if (formData.get("pnLinks") !== "1") return ok({});
   const p = pnLinkFields.safeParse(Object.fromEntries(formData));
-  if (!p.success) return {};
-  return { school_id: p.data.schoolId ?? null, county_code: p.data.countyCode ?? null, zone_id: p.data.zoneId ?? null };
+  if (!p.success) return ok({});
+  const { schoolId } = p.data;
+  let { countyCode, zoneId } = p.data;
+  if (schoolId) {
+    const { data: school } = await db.from("schools").select("county_code").eq("id", schoolId).maybeSingle();
+    if (!school) return { ok: false as const, message: "Liceul ales nu există sau nu ai acces la el." };
+    countyCode = school.county_code;
+  }
+  if (countyCode) {
+    const { data: county } = await db.from("counties").select("zone_id").eq("code", countyCode).maybeSingle();
+    if (!county) return { ok: false as const, message: "Județul ales nu există." };
+    zoneId = county.zone_id ?? undefined;
+  }
+  return ok({ school_id: schoolId ?? null, county_code: countyCode ?? null, zone_id: zoneId ?? null });
 }
 
 // Refresh every page: banners in the layout depend on any task change.
@@ -78,6 +94,9 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
     if (!meeting) return { ok: false, message: "Ședința nu există sau nu ai acces la ea." };
   }
 
+  const links = await resolvePnLinks(db, formData);
+  if (!links.ok) return { ok: false, message: links.message };
+
   const { data, error } = await db
     .from("tasks")
     .insert({
@@ -90,7 +109,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       department_id: f.departmentId,
       requesting_department_id: requestingDepartmentFor(actor, f.departmentId),
       meeting_id: meetingId.success ? meetingId.data : null,
-      ...pnLinks(formData),
+      ...links.fields,
     })
     .select("id")
     .single();
@@ -130,6 +149,9 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   }
   if (!(await assigneeIsActive(db, f.assigneeId))) return { ok: false, message: "Persoana aleasă nu are un cont activ." };
 
+  const links = await resolvePnLinks(db, formData);
+  if (!links.ok) return { ok: false, message: links.message };
+
   const { data: updated, error } = await db
     .from("tasks")
     .update({
@@ -139,7 +161,7 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
       deadline: f.deadline ? deadlineFromDate(f.deadline) : null,
       assignee_id: f.assigneeId ?? null,
       department_id: f.departmentId,
-      ...pnLinks(formData),
+      ...links.fields,
     })
     .eq("id", id.data)
     .select("id");
