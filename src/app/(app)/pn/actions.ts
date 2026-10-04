@@ -21,7 +21,9 @@ const countyCode = z.string().regex(/^[A-Z]{1,2}$/);
 export async function moveCounty(code: string, zoneId: number | null): Promise<FormState> {
   const actor = await requireProfile();
   if (!actor || !canManageZones(actor)) return { ok: false, message: "Doar VP PN mută județe." };
+  // Server actions are public endpoints: validate even typed arguments.
   if (!countyCode.safeParse(code).success) return { ok: false, message: "Județ invalid." };
+  if (!z.number().int().positive().nullable().safeParse(zoneId).success) return { ok: false, message: "Zonă invalidă." };
 
   // move_county() is the only way to change a county's zone; it also writes the history row.
   const { error } = await createUserClient().rpc("move_county", { p_code: code, p_zone: zoneId });
@@ -165,4 +167,31 @@ export async function setAmbassadorActive(formData: FormData) {
   if (!actor || !isPnMember(actor) || !id.success) return;
   await createUserClient().from("ambassadors").update({ active: formData.get("active") === "true" }).eq("id", id.data);
   revalidatePath("/pn", "layout");
+}
+
+const contactSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  email: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.email("Email invalid").max(200).optional()),
+  phone: optionalText(40),
+});
+
+// Fix an ambassador's contacts. RLS (ambc_all) limits this to the PN department.
+// Both empty = delete the row: we keep only what is needed about minors.
+export async function updateAmbassadorContacts(_prev: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requireProfile();
+  if (!actor || !isPnMember(actor)) return { ok: false, message: "Doar departamentul PN editează contactele." };
+
+  const parsed = contactSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+  const { id, email, phone } = parsed.data;
+
+  const contacts = createUserClient().from("ambassador_contacts");
+  const { error } =
+    email || phone
+      ? await contacts.upsert({ ambassador_id: id, email: email ?? null, phone: phone ?? null }, { onConflict: "ambassador_id" })
+      : await contacts.delete().eq("ambassador_id", id);
+  if (error) return { ok: false, message: "Contactul nu a putut fi salvat." };
+
+  revalidatePath("/pn", "layout");
+  return { ok: true, message: "Salvat." };
 }

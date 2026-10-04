@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { AmbassadorContactForm } from "@/components/pn/ambassador-contact-form";
 import { AmbassadorForm } from "@/components/pn/ambassador-form";
 import { ContactLogForm } from "@/components/pn/contact-log-form";
 import { SchoolForm } from "@/components/pn/school-form";
@@ -140,6 +141,7 @@ export default async function SchoolPage(props: PageProps<"/pn/schools/[id]">) {
                       )}
                     </div>
                     {c && <p className="text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(" · ")}</p>}
+                    {pn && <AmbassadorContactForm id={a.id} email={c?.email ?? null} phone={c?.phone ?? null} />}
                   </li>
                 );
               })}

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
 import type { FeatureCollection } from "geojson";
 import type { Layer, PathOptions } from "leaflet";
-import { GeoJSON, MapContainer, useMap } from "react-leaflet";
+import { AttributionControl, GeoJSON, MapContainer, useMap } from "react-leaflet";
 
 // Boundaries: geoBoundaries ROU ADM1 (World Bank), CC BY 4.0. Stored in public/data,
 // so the map makes no external request at runtime and needs no tile server or API key.
@@ -56,9 +56,11 @@ export default function LeafletMap({ colors, names, selected, onSelect }: Props)
       zoom={6}
       zoomSnap={0.25}
       scrollWheelZoom={false}
-      attributionControl
+      attributionControl={false}
       className="h-[420px] w-full rounded-xl bg-muted md:h-[560px]"
     >
+      {/* Plain "Leaflet" credit, without the default flag prefix. */}
+      <AttributionControl prefix='<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>' />
       {data && (
         <>
           {/* Remount when colors or selection change: Leaflet does not restyle on prop change. */}

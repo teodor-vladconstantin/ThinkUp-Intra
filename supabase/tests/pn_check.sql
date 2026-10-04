@@ -141,3 +141,20 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_tech', 'school id is visible on the task', 'yes', pg_temp.val($q$select case when school_id is not null then 'yes' end from tasks where title = 'P task with school'$q$)),
   ('mentor_tech', 'school row itself is hidden', '0', pg_temp.cnt($q$select 1 from schools s join tasks t on t.school_id = s.id where t.title = 'P task with school'$q$));
 reset role;
+
+-- =====================================================================
+-- Editing ambassador contacts (upsert / delete when both empty)
+-- =====================================================================
+select set_config('request.jwt.claims', '{"sub":"p_mentor","role":"authenticated"}', true);
+set local role authenticated;
+insert into rls_results (persona, check_name, expected, actual) values
+  ('mentor_pn', 'contacts: upsert for ambassador without row', 'ok', pg_temp.try($q$insert into ambassador_contacts (ambassador_id, phone) select id, '0711000000' from ambassadors where full_name = 'P Elev 2' on conflict (ambassador_id) do update set phone = excluded.phone$q$));
+insert into rls_results (persona, check_name, expected, actual) values
+  ('mentor_pn', 'contacts: delete when cleared', 'ok', pg_temp.try($q$delete from ambassador_contacts where ambassador_id = (select id from ambassadors where full_name = 'P Elev')$q$));
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"p_sec","role":"authenticated"}', true);
+set local role authenticated;
+insert into rls_results (persona, check_name, expected, actual) values
+  ('secretary', 'contacts: edit', 'denied', pg_temp.try($q$insert into ambassador_contacts (ambassador_id, phone) select id, '0' from ambassadors where full_name = 'P Elev 2' on conflict (ambassador_id) do update set phone = excluded.phone$q$));
+reset role;

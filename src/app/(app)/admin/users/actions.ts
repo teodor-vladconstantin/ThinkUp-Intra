@@ -16,7 +16,10 @@ export type ActionResult = { ok: boolean; message: string };
 export async function setUserActive(clerkId: string, active: boolean): Promise<ActionResult> {
   const actor = await requireProfile();
   if (!actor) return { ok: false, message: "Nu ești autentificat." };
-  if (!z.string().min(1).max(100).safeParse(clerkId).success) return { ok: false, message: "Utilizator invalid." };
+  // Server actions are public endpoints: validate even typed arguments.
+  if (!z.string().min(1).max(100).safeParse(clerkId).success || typeof active !== "boolean") {
+    return { ok: false, message: "Cerere invalidă." };
+  }
 
   const { error } = await createUserClient().rpc("set_user_active", { p_clerk_id: clerkId, p_active: active });
   if (error) return { ok: false, message: "Nu ai dreptul să modifici acest cont." };

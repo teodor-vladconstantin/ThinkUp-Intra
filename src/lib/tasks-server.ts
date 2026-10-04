@@ -28,7 +28,8 @@ export async function loadTaskFormOptions(db: Db, actor: Profile) {
   };
 }
 
-const baseQuery = (db: Db) => db.from("tasks_with_alert").select(TASK_SELECT).eq("archived", false);
+// ponytail: hard cap of 500 rows per list; add pagination if a single view ever needs more.
+const baseQuery = (db: Db) => db.from("tasks_with_alert").select(TASK_SELECT).eq("archived", false).limit(500);
 export type TaskQuery = ReturnType<typeof baseQuery>;
 
 // Non-archived tasks from the alert view, sorted overdue first. `narrow` adds filters.
