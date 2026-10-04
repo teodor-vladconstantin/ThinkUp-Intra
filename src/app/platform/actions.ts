@@ -247,14 +247,14 @@ export async function addReview(_prev: FormState, formData: FormData): Promise<F
   if (!parsed.success) return fail(parsed.error.issues[0].message);
   const f = parsed.data;
   const { error } = await createUserClient().from("reviews").insert({ project_id: f.projectId, author_id: me.clerkId, rating: f.rating, body: f.body ?? null });
-  if (error) return fail(error.code === "23505" ? "Ai lăsat deja o recenzie." : "Nu poți lăsa o recenzie aici.");
-  return done("Mulțumim pentru recenzie.");
+  if (error) return fail(error.code === "23505" ? "Ai lăsat deja feedback." : "Nu poți lăsa feedback aici.");
+  return done("Mulțumim pentru feedback.");
 }
 
 export async function deleteReview(reviewId: string): Promise<FormState> {
   if (!(await actor()) || !id.safeParse(reviewId).success) return fail("Cerere invalidă.");
   const { data } = await createUserClient().from("reviews").delete().eq("id", reviewId).select("id");
-  return data?.length ? done("Recenzie ștearsă.") : fail("Nu ai dreptul.");
+  return data?.length ? done("Feedback șters.") : fail("Nu ai dreptul.");
 }
 
 export async function addFeedback(_prev: FormState, formData: FormData): Promise<FormState> {

@@ -232,10 +232,10 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           {/* ---------- reviews ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Recenzii</CardTitle>
+              <CardTitle>Feedback de la colegi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!project.accept_reviews && <p className="text-sm text-muted-foreground">Proiectul nu acceptă recenzii noi.</p>}
+              {!project.accept_reviews && <p className="text-sm text-muted-foreground">Proiectul nu acceptă feedback nou.</p>}
               <ul className="space-y-3">
                 {reviewRows.map((r) => (
                   <li key={r.id} className="text-sm">
@@ -253,7 +253,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                 ))}
               </ul>
               {canReview && (
-                <ActionForm action={addReview} submitLabel="Trimite recenzia">
+                <ActionForm action={addReview} submitLabel="Lasă feedback">
                   <input type="hidden" name="projectId" value={project.id} />
                   <Select
                     name="rating"
@@ -388,7 +388,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                     options={[{ value: "", label: "Fără challenge" }, ...challengeRows.map((c) => ({ value: c.id, label: c.name }))]}
                   />
                   <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă recenzii
+                    <input type="checkbox" name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
                   </label>
                 </ActionForm>
                 <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">

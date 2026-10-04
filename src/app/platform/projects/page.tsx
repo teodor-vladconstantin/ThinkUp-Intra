@@ -78,7 +78,7 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
                 options={[{ value: "", label: "Fără challenge" }, ...(challenges.data ?? []).map((c) => ({ value: c.id as string, label: c.name as string }))]}
               />
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="acceptReviews" defaultChecked /> Acceptă recenzii
+                <input type="checkbox" name="acceptReviews" defaultChecked /> Acceptă feedback de la colegi
               </label>
             </div>
           </ActionForm>
