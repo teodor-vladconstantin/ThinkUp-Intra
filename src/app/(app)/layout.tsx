@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { NoAccess } from "@/components/no-access";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentProfile } from "@/lib/auth";
+import { isStaff } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
 import { myAlertCounts } from "@/lib/tasks-server";
 
@@ -16,6 +17,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (result.status === "no-access") return <NoAccess reason={result.reason} />;
 
   const { profile } = result;
+  // The intranet is staff only (RLS: is_staff()). Students get the platform area, built separately.
+  if (!isStaff(profile)) return <NoAccess reason="student" />;
   const { overdue } = await myAlertCounts(createUserClient(), profile);
   const overdueHref = profile.role === "mentor" ? "/tasks?scope=mine&alert=overdue" : "/tasks?alert=overdue";
 

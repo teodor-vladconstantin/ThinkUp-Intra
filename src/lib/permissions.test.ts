@@ -11,7 +11,9 @@ import {
   canWriteMeeting,
   invitableRoles,
   isAllowedEmail,
+  isCd,
   isPnMember,
+  isStaff,
   type Actor,
 } from "./permissions";
 
@@ -40,11 +42,46 @@ describe("canInvite", () => {
   });
 });
 
-test("isAllowedEmail accepts only the org domain", () => {
+test("isAllowedEmail accepts only the org domain and the mentor subdomain", () => {
   expect(isAllowedEmail("Ana.Pop@Think-Up.Academy")).toBe(true);
+  expect(isAllowedEmail("ana@mentor.think-up.academy")).toBe(true);
   expect(isAllowedEmail("ana@gmail.com")).toBe(false);
   expect(isAllowedEmail("ana@think-up.academy.evil.com")).toBe(false);
   expect(isAllowedEmail("ana@evilthink-up.academy")).toBe(false);
+  expect(isAllowedEmail("ana@other.think-up.academy")).toBe(false);
+  expect(isAllowedEmail("@think-up.academy")).toBe(false);
+  expect(isAllowedEmail("a@b@think-up.academy")).toBe(false);
+});
+
+describe("students", () => {
+  const student: Actor = { role: "student", departmentId: null, isSuperadmin: false };
+  const vpPn = { role: "vp" as const, departmentId: PN, isSuperadmin: false, departmentName: "PN" };
+  const mentorPn = { role: "mentor" as const, departmentId: PN, isSuperadmin: false, departmentName: "PN" };
+  const asStudent = { role: "student" as const, departmentId: null };
+
+  test("a student is not staff and not CD", () => {
+    expect(isStaff(student)).toBe(false);
+    expect(isStaff(mentorTech)).toBe(true);
+    expect(isCd(student)).toBe(false);
+    expect(isCd(mentorTech)).toBe(false);
+    expect(isCd(secretary)).toBe(true);
+  });
+
+  test("only PN (and CEO/President/superadmin) invite students", () => {
+    expect(canInvite(mentorPn, asStudent)).toBe(true);
+    expect(canInvite(vpPn, asStudent)).toBe(true);
+    expect(canInvite(ceo, asStudent)).toBe(true);
+    expect(canInvite({ ...vpTech, departmentName: "Tech" }, asStudent)).toBe(false);
+    expect(canInvite(student, asStudent)).toBe(false);
+    expect(invitableRoles(vpPn)).toEqual(["mentor", "student"]);
+    expect(invitableRoles({ ...vpTech, departmentName: "Tech" })).toEqual(["mentor"]);
+  });
+
+  test("only PN manages students", () => {
+    const target = { clerkId: "s", role: "student" as const, departmentId: null, isSuperadmin: false };
+    expect(canManageUser({ ...mentorPn, clerkId: "m" }, target)).toBe(true);
+    expect(canManageUser({ ...vpTech, departmentName: "Tech", clerkId: "v" }, target)).toBe(false);
+  });
 });
 
 test("canAccessPn: CD leadership yes, Tech mentor no unless flag", () => {

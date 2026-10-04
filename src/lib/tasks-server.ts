@@ -11,7 +11,7 @@ type Db = ReturnType<typeof createUserClient>;
 export async function loadTaskFormOptions(db: Db, actor: Profile) {
   const [departments, people, pn] = await Promise.all([
     db.from("departments").select("id, name").order("id"),
-    db.from("profiles").select("clerk_id, full_name, department_id").eq("is_active", true).order("full_name"),
+    db.from("profiles").select("clerk_id, full_name, department_id").eq("is_active", true).neq("role", "student").order("full_name"),
     actor.canAccessPn
       ? Promise.all([
           db.from("schools").select("id, name").order("name"),

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
-import { canInvite, isAllowedEmail, needsDepartment, ROLES, ALLOWED_EMAIL_DOMAIN } from "@/lib/permissions";
+import { canInvite, isAllowedEmail, needsDepartment, ROLES, ALLOWED_EMAIL_HINT } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -29,7 +29,7 @@ export async function createInvitation(_prev: InviteState, formData: FormData): 
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const { email, role } = parsed.data;
-  if (!isAllowedEmail(email)) return { ok: false, message: `Doar adrese @${ALLOWED_EMAIL_DOMAIN}.` };
+  if (!isAllowedEmail(email)) return { ok: false, message: `Doar adrese ${ALLOWED_EMAIL_HINT}.` };
 
   // ceo/president/secretary have no department; vp/mentor must have one.
   const departmentId = needsDepartment(role) ? (parsed.data.departmentId ?? null) : null;

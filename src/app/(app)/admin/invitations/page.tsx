@@ -47,7 +47,9 @@ export default async function InvitationsPage() {
         <SectionLabel>Administrare</SectionLabel>
         <h1 className="text-2xl font-semibold">Invitații</h1>
         {isVpOnly && (
-          <p className="text-sm text-muted-foreground">Ca VP poți invita doar mentori în departamentul tău.</p>
+          <p className="text-sm text-muted-foreground">
+            Ca VP poți invita doar mentori în departamentul tău{roles.includes("student") ? " și elevi ambasadori" : ""}.
+          </p>
         )}
       </div>
 

@@ -98,7 +98,7 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
                   action={updateMeeting}
                   mode="edit"
                   targets={[{ value: target, label: meetingLabel(meeting), kind: meeting.kind, departmentId: meeting.department_id }]}
-                  people={(people.data ?? []).filter((p) => p.is_active)}
+                  people={(people.data ?? []).filter((p) => p.is_active && p.role !== "student")}
                   defaults={{
                     id: meeting.id,
                     title: meeting.title,

@@ -15,7 +15,7 @@ export default async function NewMeetingPage() {
   const db = createUserClient();
   const [{ data: departments }, { data: people }] = await Promise.all([
     db.from("departments").select("id, name").order("id"),
-    db.from("profiles").select("clerk_id, full_name, department_id, role").eq("is_active", true).order("full_name"),
+    db.from("profiles").select("clerk_id, full_name, department_id, role").eq("is_active", true).neq("role", "student").order("full_name"),
   ]);
   const targets = meetingTargets(profile, departments ?? []);
   if (targets.length === 0) redirect("/meetings");

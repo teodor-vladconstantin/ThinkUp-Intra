@@ -13,7 +13,8 @@ export type Profile = Actor & {
   canAccessPn: boolean;
 };
 
-export type NoAccessReason = "inactive" | "email-unverified" | "domain" | "no-invitation";
+// "student" is set by the intranet layout, not here: students have a valid profile.
+export type NoAccessReason = "inactive" | "email-unverified" | "domain" | "no-invitation" | "student";
 
 export type ProfileResult =
   | { status: "ok"; profile: Profile }
