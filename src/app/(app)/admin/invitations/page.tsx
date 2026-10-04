@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { SectionLabel } from "@/components/section-label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
-import { canSeeInvitations, invitableRoles, ROLE_LABELS, type AppRole } from "@/lib/permissions";
+import { canRevokeInvitation, canSeeInvitations, invitableRoles, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
+import { revokeInvitation } from "./actions";
 import { InviteForm } from "./invite-form";
 
 const STATUS_LABELS = { pending: "În așteptare", accepted: "Acceptată", revoked: "Revocată" } as const;
@@ -16,6 +18,7 @@ type InvitationRow = {
   email: string;
   role: AppRole;
   status: keyof typeof STATUS_LABELS;
+  invited_by: string;
   created_at: string;
   departments: { name: string } | null;
 };
@@ -30,7 +33,7 @@ export default async function InvitationsPage() {
     db.from("departments").select("id, name").order("id"),
     db
       .from("invitations")
-      .select("id, email, role, status, created_at, departments(name)")
+      .select("id, email, role, status, invited_by, created_at, departments(name)")
       .order("created_at", { ascending: false })
       .limit(100),
   ]);
@@ -85,6 +88,12 @@ export default async function InvitationsPage() {
                   <time className="text-xs text-muted-foreground" dateTime={inv.created_at}>
                     {dateFmt.format(new Date(inv.created_at))}
                   </time>
+                  {inv.status === "pending" && canRevokeInvitation(profile, inv.invited_by) && (
+                    <form action={revokeInvitation}>
+                      <input type="hidden" name="id" value={inv.id} />
+                      <Button type="submit" variant="ghost" size="sm">Revocă</Button>
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>

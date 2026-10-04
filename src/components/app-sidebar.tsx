@@ -13,6 +13,7 @@ import {
   Map,
   Megaphone,
   UserPlus,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -56,6 +57,7 @@ const NAV: NavItem[] = [
   { href: "/announcements", label: "Anunțuri", icon: Megaphone, visible: () => true },
   { href: "/pn", label: "Program Național", icon: Map, visible: (u) => u.canAccessPn },
   { href: "/admin/invitations", label: "Invitații", icon: UserPlus, visible: canSeeInvitations },
+  { href: "/admin/users", label: "Utilizatori", icon: Users, visible: canSeeInvitations },
 ];
 
 export function AppSidebar({ user }: { user: SidebarUser }) {

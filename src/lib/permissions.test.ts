@@ -5,6 +5,7 @@ import {
   canCreateTaskIn,
   canEditTask,
   canInvite,
+  canManageUser,
   canManageZones,
   canMoveTask,
   canWriteMeeting,
@@ -105,5 +106,23 @@ describe("national program", () => {
     expect(canManageZones(mentorPn)).toBe(false);
     expect(canManageZones(withDept(vpTech, "Tech"))).toBe(false);
     expect(canManageZones(withDept(superadmin, "Tech"))).toBe(true);
+  });
+});
+
+describe("admin", () => {
+  const me = (a: Actor, clerkId: string) => ({ ...a, clerkId });
+  const user = (clerkId: string, a: Actor) => ({ clerkId, role: a.role, departmentId: a.departmentId, isSuperadmin: a.isSuperadmin });
+
+  test("VP manages only mentors of own department, never self", () => {
+    expect(canManageUser(me(vpTech, "vp"), user("m", mentorTech))).toBe(true);
+    expect(canManageUser(me(vpTech, "vp"), user("m2", { role: "mentor", departmentId: PN, isSuperadmin: false }))).toBe(false);
+    expect(canManageUser(me(vpTech, "vp"), user("vp", vpTech))).toBe(false);
+  });
+
+  test("CEO manages anyone but a superadmin; superadmin manages superadmins", () => {
+    expect(canManageUser(me(ceo, "ceo"), user("sec", secretary))).toBe(true);
+    expect(canManageUser(me(ceo, "ceo"), user("sa", superadmin))).toBe(false);
+    expect(canManageUser(me(superadmin, "sa1"), user("sa2", superadmin))).toBe(true);
+    expect(canManageUser(me(mentorTech, "m"), user("m3", mentorTech))).toBe(false);
   });
 });

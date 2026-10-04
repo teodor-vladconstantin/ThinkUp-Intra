@@ -78,3 +78,27 @@ export async function createInvitation(_prev: InviteState, formData: FormData): 
   revalidatePath("/admin/invitations");
   return { ok: true, message: `Invitație trimisă către ${email}.` };
 }
+
+// Revoke a pending invitation. Database first (revoke_invitation() checks who may and
+// only flips status), then Clerk, so the link in the email stops working too.
+export async function revokeInvitation(formData: FormData) {
+  const actor = await requireProfile();
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!actor || !id.success) return;
+
+  const db = createUserClient();
+  const { data: invitation } = await db.from("invitations").select("email").eq("id", id.data).maybeSingle();
+  const { error } = await db.rpc("revoke_invitation", { p_id: id.data });
+  if (error || !invitation) return;
+
+  try {
+    const clerk = await clerkClient();
+    const { data } = await clerk.invitations.getInvitationList({ query: invitation.email, status: "pending" });
+    for (const inv of data.filter((i) => i.emailAddress.toLowerCase() === invitation.email)) {
+      await clerk.invitations.revokeInvitation(inv.id);
+    }
+  } catch {
+    // Already safe without Clerk: profile creation needs a *pending* row in our table.
+  }
+  revalidatePath("/admin/invitations");
+}

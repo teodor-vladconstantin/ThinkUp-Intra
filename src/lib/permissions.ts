@@ -137,3 +137,21 @@ export function isPnMember(a: WithDepartment) {
 export function canManageZones(a: WithDepartment) {
   return a.isSuperadmin || (a.role === "vp" && a.departmentName === "PN");
 }
+
+// ---------- admin ----------
+
+export type ManagedUser = { clerkId: string; role: AppRole; departmentId: number | null; isSuperadmin: boolean };
+
+// Mirrors can_manage_user() in SQL: same authority as inviting; never yourself;
+// only a superadmin manages another superadmin.
+export function canManageUser(a: Actor & { clerkId: string }, t: ManagedUser) {
+  if (t.clerkId === a.clerkId) return false;
+  if (t.isSuperadmin && !a.isSuperadmin) return false;
+  if (a.isSuperadmin || a.role === "ceo" || a.role === "president") return true;
+  return a.role === "vp" && t.role === "mentor" && a.departmentId !== null && t.departmentId === a.departmentId;
+}
+
+// Mirrors revoke_invitation(): privileged roles any pending invitation, others only their own.
+export function canRevokeInvitation(a: Actor & { clerkId: string }, invitedBy: string) {
+  return a.isSuperadmin || a.role === "ceo" || a.role === "president" || invitedBy === a.clerkId;
+}
