@@ -31,6 +31,7 @@ async function clean(tx: SQL) {
     await tx`select id::text from decisions where meeting_id in (select id from meetings where title like ${MOCK})`
   ).map((r: { id: string }) => r.id);
 
+  await tx`delete from activity_events where profile_id like ${MOCK_ID} or project_id in (${projects})`;
   await tx`delete from puzzle_pieces where profile_id like ${MOCK_ID}`;
   await tx`delete from open_school_favorites where profile_id like ${MOCK_ID}`;
   await tx`delete from warnings where student_id like ${MOCK_ID} or body like ${MOCK}`;
@@ -57,10 +58,79 @@ async function clean(tx: SQL) {
   await tx`delete from announcements where title like ${MOCK}`;
   await tx`delete from documents where title like ${MOCK}`;
   await tx`delete from schools where name like ${MOCK}`;
+  const mockZones = tx`select id from zones where name like ${MOCK}`;
+  await tx`delete from county_zone_history where from_zone in (${mockZones}) or to_zone in (${mockZones})`;
+  await tx`update counties set zone_id = null where zone_id in (${mockZones})`;
+  await tx`delete from zones where name like ${MOCK}`;
+  await tx`delete from activity_log where entity in ('counties', 'zones') and actor_id is null`; // our own writes: no JWT, no actor
   await tx`delete from profiles where clerk_id like ${MOCK_ID}`;
 
   const ids = [...taskIds, ...meetingIds, ...schoolIds, ...decisionIds];
   if (ids.length) await tx`delete from activity_log where entity_id = any (${arr(ids)}::text[])`;
+}
+
+// Development regions (color, counties). Together they cover all 42 counties.
+const ZONES: [string, string, string[]][] = [
+  ["[MOCK] Nord-Vest", "#2563eb", ["BH", "BN", "CJ", "MM", "SM", "SJ"]],
+  ["[MOCK] Centru", "#16a34a", ["AB", "BV", "CV", "HR", "MS", "SB"]],
+  ["[MOCK] Nord-Est", "#dc2626", ["BC", "BT", "IS", "NT", "SV", "VS"]],
+  ["[MOCK] Sud-Est", "#d97706", ["BR", "BZ", "CT", "GL", "TL", "VN"]],
+  ["[MOCK] Sud-Muntenia", "#7c3aed", ["AG", "CL", "DB", "GR", "IL", "PH", "TR"]],
+  ["[MOCK] București-Ilfov", "#db2777", ["B", "IF"]],
+  ["[MOCK] Sud-Vest Oltenia", "#0891b2", ["DJ", "GJ", "MH", "OT", "VL"]],
+  ["[MOCK] Vest", "#65a30d", ["AR", "CS", "HD", "TM"]],
+];
+const CITY: Record<string, string> = {
+  AB: "Alba Iulia", AG: "Pitești", AR: "Arad", B: "București", BC: "Bacău", BH: "Oradea", BN: "Bistrița", BR: "Brăila",
+  BT: "Botoșani", BV: "Brașov", BZ: "Buzău", CJ: "Cluj-Napoca", CL: "Călărași", CS: "Reșița", CT: "Constanța",
+  CV: "Sfântu Gheorghe", DB: "Târgoviște", DJ: "Craiova", GJ: "Târgu Jiu", GL: "Galați", GR: "Giurgiu", HD: "Deva",
+  HR: "Miercurea Ciuc", IF: "Voluntari", IL: "Slobozia", IS: "Iași", MH: "Drobeta-Turnu Severin", MM: "Baia Mare",
+  MS: "Târgu Mureș", NT: "Piatra Neamț", OT: "Slatina", PH: "Ploiești", SB: "Sibiu", SJ: "Zalău", SM: "Satu Mare",
+  SV: "Suceava", TL: "Tulcea", TM: "Timișoara", TR: "Alexandria", VL: "Râmnicu Vâlcea", VN: "Focșani", VS: "Vaslui",
+};
+const MORE_SCHOOLS: Record<string, number> = { B: 3, CJ: 2, IS: 2, TM: 2, BV: 2, CT: 2, PH: 2, DJ: 2 }; // others: 1
+const NO_SCHOOLS = new Set(["GR", "IL", "TR", "CL", "VS"]); // a few counties stay empty on purpose
+// School and people names are invented: nothing here can be mistaken for a real school or person.
+const SCHOOL_NAMES = ["Horizont", "Meridian", "Lumina", "Atlas", "Nova", "Delta", "Orion", "Vega", "Polaris", "Zenit", "Aurora", "Cardinal"];
+const SCHOOL_KINDS = ["Colegiul Național", "Liceul Teoretic", "Liceul Tehnologic"];
+const STATUSES = ["partner", "interested", "contacted", "partner", "interested", "inactive", "contacted"];
+const FIRST = ["Andrei", "Maria", "Ioana", "Mihai", "Elena", "Radu", "Sofia", "Tudor", "Irina", "Vlad", "Teodora", "Darius"];
+const LAST = ["Popescu", "Ionescu", "Dumitru", "Stan", "Marin", "Toma", "Radu", "Barbu", "Neagu", "Lungu"];
+
+async function seedMap(tx: SQL) {
+  const zoneIds = new Map<string, number>();
+  for (const [name, color, codes] of ZONES) {
+    const [z] = await tx`insert into zones (name, color) values (${name}, ${color}) returning id`;
+    zoneIds.set(name, z.id);
+    await tx`update counties set zone_id = ${z.id} where code = any (${arr(codes)}::text[])`;
+  }
+  // a few past moves, so the "Istoric zone" panel has something to show
+  for (const [code, from, to] of [["BV", "Sud-Muntenia", "Centru"], ["GL", "Nord-Est", "Sud-Est"], ["VL", "Sud-Muntenia", "Sud-Vest Oltenia"]]) {
+    await tx`insert into county_zone_history (county_code, from_zone, to_zone, changed_by, changed_at)
+      values (${code}, ${zoneIds.get(`[MOCK] ${from}`)}, ${zoneIds.get(`[MOCK] ${to}`)}, 'mock_vp_pn', now() - interval '12 days')`;
+  }
+
+  let n = 0; // running index: spreads names, statuses and people deterministically
+  for (const code of Object.keys(CITY)) {
+    if (NO_SCHOOLS.has(code)) continue;
+    for (let i = 0; i < (MORE_SCHOOLS[code] ?? 1); i++, n++) {
+      const name = `[MOCK] ${SCHOOL_KINDS[n % 3]} „${SCHOOL_NAMES[n % SCHOOL_NAMES.length]}”`;
+      const status = STATUSES[n % STATUSES.length];
+      const [s] = await tx`insert into schools (name, city, county_code, contact_name, contact_email, contact_phone, status)
+        values (${name}, ${CITY[code]}, ${code}, ${`Prof. ${LAST[n % LAST.length]}`}, ${`scoala${n}@mock.invalid`}, ${`07000000${String(n).padStart(2, "0")}`}, ${status}) returning id`;
+      if (status !== "contacted" || n % 2 === 0) {
+        await tx`insert into school_contact_log (school_id, contacted_by, note, contacted_at)
+          values (${s.id}, 'mock_mentor_pn', '[MOCK] Discuție inițială despre programul ThinkUp', now() - make_interval(days => ${n + 3}))`;
+      }
+      const ambassadors = status === "partner" ? 3 : status === "interested" ? 1 : 0;
+      for (let a = 0; a < ambassadors; a++) {
+        const person = `${FIRST[(n + a) % FIRST.length]} ${LAST[(n * 3 + a) % LAST.length]}`;
+        const [amb] = await tx`insert into ambassadors (full_name, school_id) values (${`[MOCK] ${person}`}, ${s.id}) returning id`;
+        await tx`insert into ambassador_contacts (ambassador_id, email, phone) values (${amb.id}, ${`amb${n}-${a}@mock.invalid`}, '0722000000')`;
+      }
+    }
+  }
+  await tx`delete from activity_log where entity in ('counties', 'zones') and actor_id is null`; // the county updates above
 }
 
 async function seed(tx: SQL) {
@@ -100,6 +170,8 @@ async function seed(tx: SQL) {
     await tx`insert into ambassador_contacts (ambassador_id, email, phone) values (${a.id}, ${`${profile}@mock.invalid`}, '0711000000')`;
   }
   await tx`insert into school_contact_log (school_id, contacted_by, note) values (${school.id}, 'mock_mentor_pn', '[MOCK] Prima discuție cu liceul')`;
+
+  await seedMap(tx);
 
   // ---- meetings, decisions, announcements, documents ----
   const [cd] = await tx`insert into meetings (kind, title, held_at, minutes, author_id, attendees)
