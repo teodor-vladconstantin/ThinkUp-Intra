@@ -33,6 +33,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { canSeeInvitations, isCd, isStaff, ROLE_LABELS, type Actor, type AppRole } from "@/lib/permissions";
 
@@ -82,12 +83,14 @@ const PLATFORM_NAV: NavItem[] = [
 
 export function AppSidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+  const closeMobile = () => setOpenMobile(false); // phone: the sheet must not stay over the new page
 
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
         {/* TODO(logo): replace with the light logo from public/logos/ once it is copied in */}
-        <Link href={isStaff(user) ? "/dashboard" : "/platform"} className="text-lg font-semibold tracking-tight">
+        <Link href={isStaff(user) ? "/dashboard" : "/platform"} className="text-lg font-semibold tracking-tight" onClick={closeMobile}>
           ThinkUp <span className="text-sidebar-primary">Intranet</span>
         </Link>
       </SidebarHeader>
@@ -113,7 +116,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
                     </SidebarMenuButton>
                   ) : (
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="nav-link">
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={closeMobile}>
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>
