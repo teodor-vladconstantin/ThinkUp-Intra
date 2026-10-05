@@ -281,7 +281,6 @@ export async function createChallenge(_prev: FormState, formData: FormData): Pro
       name: z.string().trim().min(1, "Numele e obligatoriu").max(200),
       description: optionalText(5000),
       deadline: optionalDate,
-      maxScore: z.coerce.number().int().min(1, "Punctaj maxim invalid").max(10000),
     })
     .safeParse(Object.fromEntries(formData));
   if (!me || !isPlatformMentor(me)) return fail("Doar mentorii PN creează challenge-uri.");
@@ -289,7 +288,7 @@ export async function createChallenge(_prev: FormState, formData: FormData): Pro
   const f = parsed.data;
   const { error } = await createUserClient()
     .from("challenges")
-    .insert({ name: f.name, description: f.description ?? null, deadline: f.deadline ?? null, max_score: f.maxScore, created_by: me.clerkId });
+    .insert({ name: f.name, description: f.description ?? null, deadline: f.deadline ?? null, created_by: me.clerkId });
   return error ? fail("Challenge-ul nu a putut fi creat.") : done("Challenge creat.");
 }
 
@@ -300,10 +299,11 @@ export async function setChallengeArchived(challengeId: string, archived: boolea
 }
 
 // Grades every member of the project (grade_project: one transaction, RLS per row).
+const grade = z.coerce.number().int().min(1, "Notele sunt de la 1 la 5").max(5, "Notele sunt de la 1 la 5");
 export async function gradeProject(_prev: FormState, formData: FormData): Promise<FormState> {
   const me = await actor();
   const parsed = z
-    .object({ projectId: id, challengeId: id, score: z.coerce.number().int().min(0, "Punctaj invalid"), feedback: optionalText(5000) })
+    .object({ projectId: id, challengeId: id, innovation: grade, impact: grade, feedbackScore: grade, efficiency: grade, feedback: optionalText(5000) })
     .safeParse(Object.fromEntries(formData));
   if (!me || !isPlatformMentor(me)) return fail("Doar mentorii PN notează.");
   if (!parsed.success) return fail(parsed.error.issues[0].message);
@@ -311,11 +311,33 @@ export async function gradeProject(_prev: FormState, formData: FormData): Promis
   const { data, error } = await createUserClient().rpc("grade_project", {
     p_project: f.projectId,
     p_challenge: f.challengeId,
-    p_score: f.score,
+    p_innovation: f.innovation,
+    p_impact: f.impact,
+    p_feedback_score: f.feedbackScore,
+    p_efficiency: f.efficiency,
     p_feedback: f.feedback ?? null,
   });
-  if (error) return fail(error.message.includes("max_score") ? "Punctajul depășește maximul challenge-ului." : "Notarea nu a reușit.");
+  if (error) return fail("Notarea nu a reușit.");
   return done(`Notat: ${data} ${data === 1 ? "elev" : "elevi"}.`);
+}
+
+// Bonus points for a student (e.g. posters), counted in the school year they are awarded in.
+export async function giveBonus(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await actor();
+  const parsed = z
+    .object({
+      profileId: z.string().min(1),
+      points: z.coerce.number().int().min(1, "Puncte invalide").max(100),
+      reason: z.string().trim().min(1, "Motivul e obligatoriu").max(300),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!me || !isPlatformMentor(me)) return fail("Doar mentorii PN acordă bonusuri.");
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  const f = parsed.data;
+  const { error } = await createUserClient()
+    .from("bonus_points")
+    .insert({ student_id: f.profileId, points: f.points, reason: f.reason, awarded_by: me.clerkId });
+  return error ? fail("Bonusul nu a putut fi acordat.") : done("Bonus acordat.");
 }
 
 // ---------- personal objectives ----------

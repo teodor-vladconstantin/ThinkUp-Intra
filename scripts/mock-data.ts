@@ -137,10 +137,10 @@ async function seed(tx: SQL) {
   await tx`insert into task_comments (task_id, author_id, body) values (${archived.id}, ${meId}, '[MOCK] comentariu')`;
 
   // ---- platform ----
-  const [past] = await tx`insert into challenges (name, description, deadline, max_score, created_by)
-    values ('[MOCK] Challenge încheiat', 'Termen depășit.', now() - interval '7 days', 100, 'mock_mentor_pn') returning id`;
-  const [open] = await tx`insert into challenges (name, description, deadline, max_score, created_by)
-    values ('[MOCK] Challenge activ', 'În desfășurare.', now() + interval '14 days', 50, 'mock_mentor_pn') returning id`;
+  const [past] = await tx`insert into challenges (name, description, deadline, created_by)
+    values ('[MOCK] Challenge încheiat', 'Termen depășit.', now() - interval '7 days', 'mock_mentor_pn') returning id`;
+  const [open] = await tx`insert into challenges (name, description, deadline, created_by)
+    values ('[MOCK] Challenge activ', 'În desfășurare.', now() + interval '14 days', 'mock_mentor_pn') returning id`;
 
   const [p1] = await tx`insert into projects (name, description, created_by, challenge_id) values ('[MOCK] Aplicație de mediu', 'Proiect de test 1.', 'mock_stud_1', ${past.id}) returning id`;
   const [p2] = await tx`insert into projects (name, description, created_by, challenge_id) values ('[MOCK] Robot de sortare', 'Proiect de test 2.', 'mock_stud_2', ${open.id}) returning id`;
@@ -159,8 +159,8 @@ async function seed(tx: SQL) {
   await tx`insert into reviews (project_id, author_id, rating, body) values (${p1.id}, 'mock_mentor_tech', 3, '[MOCK] Merge, dar poate mai bine')`;
   await tx`insert into mentor_feedback (project_id, mentor_id, body) values (${p1.id}, 'mock_mentor_pn', '[MOCK] Bravo pentru cercetare')`;
   // grades: Ana + Carmen graded for the closed challenge (one project -> one grade per member); Bogdan not graded
-  await tx`insert into submissions (challenge_id, student_id, project_id, score, feedback, graded_by)
-    values (${past.id}, 'mock_stud_1', ${p1.id}, 85, '[MOCK] Foarte bine', 'mock_mentor_pn'), (${past.id}, 'mock_stud_3', ${p1.id}, 85, '[MOCK] Foarte bine', 'mock_mentor_pn')`;
+  await tx`insert into submissions (challenge_id, student_id, project_id, innovation, impact, feedback_score, efficiency, feedback, graded_by)
+    values (${past.id}, 'mock_stud_1', ${p1.id}, 4, 5, 3, 4, '[MOCK] Foarte bine', 'mock_mentor_pn'), (${past.id}, 'mock_stud_3', ${p1.id}, 4, 5, 3, 4, '[MOCK] Foarte bine', 'mock_mentor_pn')`;
   await tx`insert into warnings (student_id, issued_by, body) values ('mock_stud_2', 'mock_mentor_pn', '[MOCK] Absență nemotivată')`;
   await tx`insert into warnings (student_id, issued_by, body, archived) values ('mock_stud_2', 'mock_mentor_pn', '[MOCK] Avertisment vechi (arhivat)', true)`;
   await tx`insert into personal_objectives (owner_id, name, progress, deadline) values ('mock_stud_1', '[MOCK] Învăț Python', 30, current_date + 20)`;

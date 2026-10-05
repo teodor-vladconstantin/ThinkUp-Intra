@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/dates";
-import { isPlatformMentor, platformPeople, requirePlatformProfile } from "@/lib/platform";
+import { MAX_CHALLENGE_SCORE, isPlatformMentor, platformPeople, requirePlatformProfile } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
 import { createChallenge, setChallengeArchived } from "../actions";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -15,7 +15,6 @@ type Challenge = {
   name: string;
   description: string | null;
   deadline: string | null;
-  max_score: number;
   created_by: string;
   archived: boolean;
   projects: { id: string; name: string; archived: boolean }[];
@@ -32,7 +31,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
     db
       .from("challenges")
       // submissions: RLS gives PN every grade and a student only their own
-      .select("id, name, description, deadline, max_score, created_by, archived, projects(id, name, archived), submissions(student_id, score)")
+      .select("id, name, description, deadline, created_by, archived, projects(id, name, archived), submissions(student_id, score)")
       .eq("archived", archived)
       .order("created_at", { ascending: false }),
     platformPeople(db),
@@ -58,10 +57,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
             <ActionForm action={createChallenge} submitLabel="Creează">
               <Input name="name" required maxLength={200} placeholder="Nume" aria-label="Nume" />
               <textarea name="description" rows={3} maxLength={5000} placeholder="Descriere / cerințe" aria-label="Descriere" className={fieldClass} />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <DatePicker name="deadline" aria-label="Termen" placeholder="Termen (opțional)" />
-                <Input name="maxScore" type="number" min={1} max={10000} defaultValue={100} required aria-label="Punctaj maxim" />
-              </div>
+              <DatePicker name="deadline" aria-label="Termen" placeholder="Termen (opțional)" />
             </ActionForm>
           </CardContent>
         </Card>
@@ -76,7 +72,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
                 <CardTitle>{c.name}</CardTitle>
                 <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   {c.deadline && <Badge variant="secondary">până la {formatDate(c.deadline)}</Badge>}
-                  <Badge variant="secondary">max {c.max_score}p</Badge>
+                  <Badge variant="secondary">max {MAX_CHALLENGE_SCORE}p</Badge>
                   {mentor && c.created_by === me.clerkId && (
                     <ActionButton action={setChallengeArchived.bind(null, c.id, !c.archived)} confirmText="Confirmă">
                       {c.archived ? "Reactivează" : "Arhivează"}
@@ -107,7 +103,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
                       {c.submissions.map((s) => (
                         <li key={s.student_id}>
                           {mentor ? `${people.name(s.student_id)}: ` : ""}
-                          <span className="font-medium">{s.score}</span> / {c.max_score}
+                          <span className="font-medium">{s.score}</span> / {MAX_CHALLENGE_SCORE}
                         </li>
                       ))}
                     </ul>

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import { isPlatformMentor, platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
+import { CRITERIA, MAX_CHALLENGE_SCORE, isPlatformMentor, platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
 import {
   addFeedback,
@@ -49,7 +49,7 @@ type Goal = { id: string; name: string; description: string | null; progress: nu
 type Material = { id: string; name: string; description: string | null; files: { id: string; name: string; storage_path: string }[] };
 type Review = { id: string; author_id: string; rating: number; body: string | null; created_at: string };
 type Feedback = { id: string; mentor_id: string; body: string; created_at: string };
-type Grade = { student_id: string; score: number; feedback: string | null; challenge: { name: string; max_score: number } | null };
+type Grade = { student_id: string; score: number; innovation: number; impact: number; feedback_score: number; efficiency: number; challenge: { name: string } | null };
 
 export default async function ProjectPage(props: PageProps<"/platform/projects/[id]">) {
   const me = await requirePlatformProfile();
@@ -73,9 +73,9 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
     db.from("materials").select("id, name, description, files:material_files(id, name, storage_path)").eq("project_id", project.id).order("position").order("created_at"),
     db.from("reviews").select("id, author_id, rating, body, created_at").eq("project_id", project.id).order("created_at", { ascending: false }),
     db.from("mentor_feedback").select("id, mentor_id, body, created_at").eq("project_id", project.id).order("created_at", { ascending: false }),
-    db.from("challenges").select("id, name, max_score").eq("archived", false).order("created_at", { ascending: false }),
+    db.from("challenges").select("id, name").eq("archived", false).order("created_at", { ascending: false }),
     // RLS: PN sees every grade, a student only their own.
-    db.from("submissions").select("student_id, score, feedback, challenge:challenges(name, max_score)").eq("project_id", project.id),
+    db.from("submissions").select("student_id, score, innovation, impact, feedback_score, efficiency, challenge:challenges(name)").eq("project_id", project.id),
     platformPeople(db),
   ]);
 
@@ -84,7 +84,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const photoRows = (photos.data ?? []) as { id: string; storage_path: string }[];
   const materialRows = (materials.data ?? []) as unknown as Material[];
   const reviewRows = (reviews.data ?? []) as Review[];
-  const challengeRows = (challenges.data ?? []) as { id: string; name: string; max_score: number }[];
+  const challengeRows = (challenges.data ?? []) as { id: string; name: string }[];
   const urls = await signedUrls(db, "project-files", [...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
@@ -349,7 +349,9 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                   {((grades.data ?? []) as unknown as Grade[]).map((g) => (
                     <li key={g.student_id + (g.challenge?.name ?? "")}>
                       {people.name(g.student_id)}: <span className="font-medium">{g.score}</span>
-                      {g.challenge && ` / ${g.challenge.max_score} · ${g.challenge.name}`}
+                      {` / ${MAX_CHALLENGE_SCORE}`}
+                      {g.challenge && ` · ${g.challenge.name}`}
+                      <span className="text-muted-foreground"> ({CRITERIA.map((c) => `${c.label} ${g[c.key]}`).join(" · ")})</span>
                     </li>
                   ))}
                 </ul>
@@ -362,9 +364,20 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                       aria-label="Challenge"
                       placeholder="Challenge…"
                       defaultValue={project.challenge_id ?? ""}
-                      options={challengeRows.map((c) => ({ value: c.id, label: `${c.name} (max ${c.max_score})` }))}
+                      options={challengeRows.map((c) => ({ value: c.id, label: c.name }))}
                     />
-                    <Input name="score" type="number" min={0} required placeholder="Punctaj" aria-label="Punctaj" />
+                    <div className="grid grid-cols-2 gap-2">
+                      {CRITERIA.map((c) => (
+                        <Select
+                          key={c.key}
+                          name={c.key === "feedback_score" ? "feedbackScore" : c.key}
+                          required
+                          aria-label={c.label}
+                          placeholder={`${c.label} (1–5)`}
+                          options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))}
+                        />
+                      ))}
+                    </div>
                     <textarea name="feedback" rows={2} maxLength={5000} placeholder="Comentariu (opțional)" aria-label="Comentariu" className={fieldClass} />
                   </ActionForm>
                 )}

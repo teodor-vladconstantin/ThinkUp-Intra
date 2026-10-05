@@ -40,3 +40,18 @@ export function storageName(fileName: string) {
   const clean = fileName.normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(-80) || "file";
   return `${crypto.randomUUID()}-${clean}`;
 }
+
+// Grading: four criteria, 1-5 each -> 20 per challenge (submissions.score is their sum).
+export const CRITERIA = [
+  { key: "innovation", label: "Inovație" },
+  { key: "impact", label: "Impact" },
+  { key: "feedback_score", label: "Feedback" },
+  { key: "efficiency", label: "Eficiență" },
+] as const;
+export const MAX_CHALLENGE_SCORE = 20;
+
+// School year (Sep-Aug) of a date, as its starting year: 2026-10-04 -> 2026, 2027-03-01 -> 2026.
+export function schoolYear(iso: string): number {
+  const d = new Date(iso);
+  return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+}

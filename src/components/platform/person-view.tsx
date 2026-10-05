@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Profile } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
-import { isPlatformMentor, platformPeople, signedUrls } from "@/lib/platform";
+import { CRITERIA, MAX_CHALLENGE_SCORE, isPlatformMentor, platformPeople, schoolYear, signedUrls } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
 import {
   addObjective,
   archiveWarning,
   deleteObjective,
+  giveBonus,
   givePuzzlePiece,
   issueWarning,
   saveProfile,
@@ -24,7 +25,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 const SOCIAL_LABELS: Record<string, string> = { github: "GitHub", linkedin: "LinkedIn", instagram: "Instagram", website: "Site" };
 
 type PlatformProfile = { bio: string | null; social: Record<string, string>; avatar_path: string | null };
-type Grade = { score: number; feedback: string | null; graded_at: string; challenge: { name: string; max_score: number } | null };
+type Grade = {
+  score: number; innovation: number; impact: number; feedback_score: number; efficiency: number;
+  feedback: string | null; graded_at: string; challenge: { name: string; deadline: string | null; created_at: string } | null;
+};
+type Bonus = { id: string; points: number; reason: string; awarded_at: string };
 type Warning = { id: string; body: string; issued_by: string; archived: boolean; created_at: string };
 type Objective = { id: string; name: string; description: string | null; progress: number; deadline: string | null };
 
@@ -40,14 +45,24 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
   const self = personId === me.clerkId;
   const mentor = isPlatformMentor(me);
 
-  const [profile, pieces, projects, grades, warnings, objectives] = await Promise.all([
+  const [profile, pieces, projects, grades, warnings, objectives, challenges, bonuses] = await Promise.all([
     db.from("platform_profiles").select("bio, social, avatar_path").eq("profile_id", personId).maybeSingle(),
     db.from("puzzle_pieces").select("piece").eq("profile_id", personId).order("piece"),
     db.from("project_members").select("project:projects(id, name, archived)").eq("profile_id", personId),
-    db.from("submissions").select("score, feedback, graded_at, challenge:challenges(name, max_score)").eq("student_id", personId).order("graded_at", { ascending: false }),
+    db.from("submissions").select("score, innovation, impact, feedback_score, efficiency, feedback, graded_at, challenge:challenges(name, deadline, created_at)").eq("student_id", personId).order("graded_at", { ascending: false }),
     db.from("warnings").select("id, body, issued_by, archived, created_at").eq("student_id", personId).order("created_at", { ascending: false }),
     db.from("personal_objectives").select("id, name, description, progress, deadline").eq("owner_id", personId).order("created_at"),
+    db.from("challenges").select("deadline, created_at"),
+    db.from("bonus_points").select("id, points, reason, awarded_at").eq("student_id", personId).order("awarded_at", { ascending: false }),
   ]);
+  // Yearly total: grades of the school year's challenges + bonuses; max = 20 per challenge that year.
+  const gradeRows = (grades.data ?? []) as unknown as Grade[];
+  const bonusRows = (bonuses.data ?? []) as Bonus[];
+  const years = new Map<number, { score: number; max: number; bonus: number }>();
+  const year = (y: number) => years.get(y) ?? years.set(y, { score: 0, max: 0, bonus: 0 }).get(y)!;
+  for (const c of challenges.data ?? []) year(schoolYear(c.deadline ?? c.created_at)).max += MAX_CHALLENGE_SCORE;
+  for (const g of gradeRows) if (g.challenge) year(schoolYear(g.challenge.deadline ?? g.challenge.created_at)).score += g.score;
+  for (const b of bonusRows) year(schoolYear(b.awarded_at)).bonus += b.points;
   const pp = (profile.data ?? { bio: null, social: {}, avatar_path: null }) as PlatformProfile;
   const avatar = pp.avatar_path ? (await signedUrls(db, "avatars", [pp.avatar_path])).get(pp.avatar_path) : undefined;
   const projectRows = ((projects.data ?? []) as unknown as { project: { id: string; name: string; archived: boolean } | null }[])
@@ -135,19 +150,43 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
               <CardTitle>Note</CardTitle>
             </CardHeader>
             <CardContent>
-              {(grades.data ?? []).length === 0 ? (
+              {[...years].sort((a, b) => b[0] - a[0]).map(([y, t]) => (
+                <p key={y} className="mb-2 text-sm font-medium">
+                  {y}–{y + 1}: {t.score + t.bonus} / {t.max}
+                  {t.bonus > 0 && <span className="font-normal text-muted-foreground"> (din care {t.bonus} bonus)</span>}
+                </p>
+              ))}
+              {gradeRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nicio notă încă.</p>
               ) : (
                 <ul className="space-y-2 text-sm">
-                  {((grades.data ?? []) as unknown as Grade[]).map((g, i) => (
+                  {gradeRows.map((g, i) => (
                     <li key={i}>
-                      <span className="font-medium">{g.score}</span>
-                      {g.challenge && ` / ${g.challenge.max_score} · ${g.challenge.name}`}
+                      <span className="font-medium">{g.score}</span> / {MAX_CHALLENGE_SCORE}
+                      {g.challenge && ` · ${g.challenge.name}`}
                       <span className="text-muted-foreground"> · {formatDate(g.graded_at)}</span>
+                      <p className="text-muted-foreground">{CRITERIA.map((c) => `${c.label} ${g[c.key]}`).join(" · ")}</p>
                       {g.feedback && <p className="whitespace-pre-wrap text-muted-foreground">{g.feedback}</p>}
                     </li>
                   ))}
                 </ul>
+              )}
+              {bonusRows.length > 0 && (
+                <ul className="mt-3 space-y-1 text-sm">
+                  {bonusRows.map((b) => (
+                    <li key={b.id}>
+                      <Badge variant="secondary">+{b.points} bonus</Badge> {b.reason}
+                      <span className="text-muted-foreground"> · {formatDate(b.awarded_at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {mentor && !self && (
+                <ActionForm action={giveBonus} submitLabel="Acordă bonus" className="mt-3">
+                  <input type="hidden" name="profileId" value={personId} />
+                  <Input name="points" type="number" min={1} max={100} required placeholder="Puncte" aria-label="Puncte bonus" />
+                  <Input name="reason" required maxLength={300} placeholder="Motiv (ex. afiș)" aria-label="Motiv" />
+                </ActionForm>
               )}
             </CardContent>
           </Card>

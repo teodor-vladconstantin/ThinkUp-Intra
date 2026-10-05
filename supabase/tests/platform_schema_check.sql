@@ -129,13 +129,17 @@ insert into rls_results (persona, check_name, expected, actual) values
 -- =====================================================================
 select pg_temp.as_user('y_pn');
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'create challenge', 'ok', pg_temp.try($q$insert into challenges (name, max_score, created_by) values ('Y Challenge', 50, 'y_pn')$q$));
+  ('mentor_pn', 'create challenge', 'ok', pg_temp.try($q$insert into challenges (name, created_by) values ('Y Challenge', 'y_pn')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'grade project (A + B)', '2', pg_temp.val($q$select grade_project((select id from projects where name = 'Y Proiect A'), (select id from challenges where name = 'Y Challenge'), 40, 'ok')::text$q$));
+  ('mentor_pn', 'grade project (A + B)', '2', pg_temp.val($q$select grade_project((select id from projects where name = 'Y Proiect A'), (select id from challenges where name = 'Y Challenge'), 4, 5, 3, 4, 'ok')::text$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'score above max', 'denied', pg_temp.try($q$update submissions set score = 51 where student_id = 'y_a'$q$));
+  ('mentor_pn', 'criterion above 5', 'denied', pg_temp.try($q$update submissions set impact = 6 where student_id = 'y_a'$q$)),
+  ('mentor_pn', 'criterion below 1', 'denied', pg_temp.try($q$update submissions set impact = 0 where student_id = 'y_a'$q$)),
+  ('mentor_pn', 'score is the sum', '16', pg_temp.val($q$select score::text from submissions where student_id = 'y_a'$q$)),
+  ('mentor_pn', 'give bonus', 'ok', pg_temp.try($q$insert into bonus_points (student_id, points, reason, awarded_by) values ('y_a', 2, 'afis', 'y_pn')$q$)),
+  ('mentor_pn', 'negative bonus', 'denied', pg_temp.try($q$insert into bonus_points (student_id, points, reason, awarded_by) values ('y_a', -1, 'x', 'y_pn')$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'grade a Tech mentor (no platform)', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, score, graded_by) select id, 'y_tech', 1, 'y_pn' from challenges where name = 'Y Challenge'$q$));
+  ('mentor_pn', 'grade a Tech mentor (no platform)', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, innovation, impact, feedback_score, efficiency, graded_by) select id, 'y_tech', 1, 1, 1, 1, 'y_pn' from challenges where name = 'Y Challenge'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'feedback on A project', 'ok', pg_temp.try($q$insert into mentor_feedback (project_id, mentor_id, body) select id, 'y_pn', 'bravo' from projects where name = 'Y Proiect A'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
@@ -164,14 +168,16 @@ insert into rls_results (persona, check_name, expected, actual) values
 -- =====================================================================
 select pg_temp.as_user('y_a');
 insert into rls_results (persona, check_name, expected, actual) values
-  ('student_a', 'own grade', '40', pg_temp.val($q$select score::text from submissions where student_id = 'y_a'$q$)),
+  ('student_a', 'own grade', '16', pg_temp.val($q$select score::text from submissions where student_id = 'y_a'$q$)),
   ('student_a', 'B grade hidden', '0', pg_temp.cnt($q$select 1 from submissions where student_id = 'y_b'$q$)),
   ('student_a', 'own warning', '1', pg_temp.cnt($q$select 1 from warnings where student_id = 'y_a'$q$)),
   ('student_a', 'sees mentor feedback', '1', pg_temp.cnt($q$select 1 from mentor_feedback where body = 'bravo'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('student_a', 'raise own grade', 'denied', pg_temp.try($q$update submissions set score = 50 where student_id = 'y_a'$q$));
+  ('student_a', 'raise own grade', 'denied', pg_temp.try($q$update submissions set impact = 5 where student_id = 'y_a'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('student_a', 'grade self', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, score, graded_by) select id, 'y_a', 1, 'y_a' from challenges where name = 'Y Challenge'$q$));
+  ('student_a', 'own bonus', '1', pg_temp.cnt($q$select 1 from bonus_points where student_id = 'y_a'$q$)),
+  ('student_a', 'self bonus', 'denied', pg_temp.try($q$insert into bonus_points (student_id, points, reason, awarded_by) values ('y_a', 5, 'x', 'y_a')$q$)),
+  ('student_a', 'grade self', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, innovation, impact, feedback_score, efficiency, graded_by) select id, 'y_a', 1, 1, 1, 1, 'y_a' from challenges where name = 'Y Challenge'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('student_a', 'count an Open School view', 'ok', pg_temp.try($q$select open_school_view((select id from open_school_files where name = 'Y Curs'))$q$));
 insert into rls_results (persona, check_name, expected, actual) values
@@ -215,6 +221,6 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('ceo', 'sees projects', 'yes', pg_temp.val($q$select case when count(*) >= 2 then 'yes' end from projects where name like 'Y Proiect%'$q$)),
   ('ceo', 'sees grades', '0', pg_temp.cnt($q$select 1 from submissions$q$));
 insert into rls_results (persona, check_name, expected, actual) values
-  ('ceo', 'grade', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, score, graded_by) select id, 'y_b', 1, 'y_ceo' from challenges where name = 'Y Challenge'$q$));
+  ('ceo', 'grade', 'denied', pg_temp.try($q$insert into submissions (challenge_id, student_id, innovation, impact, feedback_score, efficiency, graded_by) select id, 'y_b', 1, 1, 1, 1, 'y_ceo' from challenges where name = 'Y Challenge'$q$));
 
 reset role;
