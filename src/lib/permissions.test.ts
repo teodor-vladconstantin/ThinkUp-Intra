@@ -35,8 +35,9 @@ describe("canInvite", () => {
     expect(canInvite(vpTech, { role: "mentor", departmentId: PN })).toBe(false);
     expect(canInvite(vpTech, { role: "vp", departmentId: TECH })).toBe(false);
   });
-  test("secretary and mentor cannot invite", () => {
-    expect(canInvite(secretary, { role: "mentor", departmentId: TECH })).toBe(false);
+  test("secretary invites any staff role; a mentor invites nobody", () => {
+    expect(canInvite(secretary, { role: "mentor", departmentId: TECH })).toBe(true);
+    expect(canInvite(secretary, { role: "vp", departmentId: PN })).toBe(true);
     expect(canInvite(mentorTech, { role: "mentor", departmentId: TECH })).toBe(false);
     expect(invitableRoles(mentorTech)).toEqual([]);
   });
@@ -67,10 +68,12 @@ describe("students", () => {
     expect(isCd(secretary)).toBe(true);
   });
 
-  test("only PN (and CEO/President/superadmin) invite students", () => {
+  test("only PN and the superadmin invite students (CEO/President/Secretary invite staff only)", () => {
     expect(canInvite(mentorPn, asStudent)).toBe(true);
     expect(canInvite(vpPn, asStudent)).toBe(true);
-    expect(canInvite(ceo, asStudent)).toBe(true);
+    expect(canInvite(superadmin, asStudent)).toBe(true);
+    expect(canInvite(ceo, asStudent)).toBe(false);
+    expect(canInvite(secretary, asStudent)).toBe(false);
     expect(canInvite({ ...vpTech, departmentName: "Tech" }, asStudent)).toBe(false);
     expect(canInvite(student, asStudent)).toBe(false);
     expect(invitableRoles(vpPn)).toEqual(["mentor"]); // students: from the PN ambassador record
