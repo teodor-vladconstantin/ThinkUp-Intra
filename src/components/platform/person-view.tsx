@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SectionLabel } from "@/components/section-label";
 import { ActionButton, ActionForm, FileUpload, ProgressSelect, fieldClass } from "@/components/platform/controls";
+import { StreakCard } from "@/components/platform/streak-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,7 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
     .map((r) => r.project)
     .filter((p): p is { id: string; name: string; archived: boolean } => !!p && !p.archived);
   const privateVisible = self || mentor;
+  const thisYear = years.get(schoolYear(new Date().toISOString()));
 
   return (
     <div className="space-y-6">
@@ -98,6 +100,7 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
       {pp.bio && <p className="whitespace-pre-wrap text-sm">{pp.bio}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {privateVisible && <StreakCard personId={personId} points={(thisYear?.score ?? 0) + (thisYear?.bonus ?? 0)} />}
         <Card>
           <CardHeader>
             <CardTitle>Proiecte</CardTitle>
