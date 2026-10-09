@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { UserActiveButton } from "@/components/admin/user-active-button";
 import { SectionLabel } from "@/components/section-label";
-import { backfillNames, requireProfile } from "@/lib/auth";
+import { fillMissingNames, requireProfile } from "@/lib/auth";
 import { canManageUser, canSeeInvitations, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -28,9 +28,7 @@ export default async function UsersPage() {
     .order("is_active", { ascending: false })
     .order("full_name");
   const users = (data ?? []) as unknown as Row[];
-  const missing = users.filter((u) => !u.full_name).map((u) => u.clerk_id);
-  const found = await backfillNames(missing).catch(() => new Map<string, string>());
-  for (const u of users) u.full_name ??= found.get(u.clerk_id) ?? null;
+  await fillMissingNames(users);
 
   return (
     <div className="space-y-6">

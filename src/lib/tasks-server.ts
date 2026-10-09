@@ -1,5 +1,5 @@
 import "server-only";
-import type { Profile } from "@/lib/auth";
+import { fillMissingNames, type Profile } from "@/lib/auth";
 import { canMoveTask } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
 import { sortTasks, TASK_SELECT, type Task } from "@/lib/tasks";
@@ -20,6 +20,7 @@ export async function loadTaskFormOptions(db: Db, actor: Profile) {
         ])
       : null,
   ]);
+  if (people.data) await fillMissingNames(people.data);
   const all = departments.data ?? [];
   return {
     departments: canMoveTask(actor) ? all : all.filter((d) => d.id === actor.departmentId),

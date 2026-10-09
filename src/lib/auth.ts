@@ -134,6 +134,12 @@ export async function backfillNames(ids: string[]): Promise<Map<string, string>>
   return names;
 }
 
+// For lists of profiles: fills empty full_name in place (and in the database).
+export async function fillMissingNames(rows: { clerk_id: string; full_name: string | null }[]) {
+  const found = await backfillNames(rows.filter((r) => !r.full_name).map((r) => r.clerk_id).slice(0, 100)).catch(() => new Map<string, string>());
+  for (const r of rows) r.full_name ??= found.get(r.clerk_id) ?? null;
+}
+
 async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRow): Promise<ProfileResult> {
   if (!row.is_active) return { status: "no-access", reason: "inactive" };
   // Being an ambassador lives on the PN side (ambassadors.profile_id); the SQL function

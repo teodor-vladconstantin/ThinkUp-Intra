@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { MeetingForm } from "@/components/meetings/meeting-form";
 import { SectionLabel } from "@/components/section-label";
 import { Card, CardContent } from "@/components/ui/card";
-import { requireProfile } from "@/lib/auth";
+import { fillMissingNames, requireProfile } from "@/lib/auth";
 import { dateInputValue } from "@/lib/dates";
 import { meetingTargets } from "@/lib/meetings";
 import { createUserClient } from "@/lib/supabase/server";
@@ -17,7 +17,8 @@ export default async function NewMeetingPage() {
     db.from("departments").select("id, name").order("id"),
     db.from("profiles").select("clerk_id, full_name, department_id, role").eq("is_active", true).neq("role", "student").order("full_name"),
   ]);
-  const targets = meetingTargets(profile, departments ?? []);
+  if (people) await fillMissingNames(people);
+  const targets =meetingTargets(profile, departments ?? []);
   if (targets.length === 0) redirect("/meetings");
 
   return (

@@ -7,7 +7,7 @@ import { SectionLabel } from "@/components/section-label";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireProfile } from "@/lib/auth";
+import { fillMissingNames, requireProfile } from "@/lib/auth";
 import { dateInputValue, formatDate } from "@/lib/dates";
 import { MEETING_SELECT, meetingLabel, type Meeting } from "@/lib/meetings";
 import { canWriteMeeting } from "@/lib/permissions";
@@ -36,7 +36,8 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
     db.from("profiles").select("clerk_id, full_name, department_id, role, is_active").order("full_name"),
   ]);
 
-  const editable = canWriteMeeting(profile, meeting.kind, meeting.department_id);
+  if (people.data) await fillMissingNames(people.data);
+  const editable =canWriteMeeting(profile, meeting.kind, meeting.department_id);
   const names = new Map((people.data ?? []).map((p) => [p.clerk_id, p.full_name ?? "—"]));
   const target = meeting.kind === "cd" ? "cd" : `dept:${meeting.department_id}`;
 
