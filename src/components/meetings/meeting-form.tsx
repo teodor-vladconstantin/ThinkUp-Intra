@@ -83,7 +83,7 @@ export function MeetingForm({
           {present.map((p) => (
             <label key={p.clerk_id} className="flex items-center gap-2 text-sm">
               <Checkbox name="attendees" value={p.clerk_id} defaultChecked={attendees.has(p.clerk_id)} />
-              {p.full_name ?? p.clerk_id}
+              {p.full_name ?? "—"}
             </label>
           ))}
           {present.length === 0 && <p className="text-sm text-muted-foreground">Nicio persoană în acest departament.</p>}
@@ -113,7 +113,7 @@ export function MeetingForm({
                   aria-label="Responsabil"
                   value={row.assigneeId}
                   onValueChange={(v) => updateRow(i, { assigneeId: v })}
-                  options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? p.clerk_id }))]}
+                  options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? "—" }))]}
                 />
                 <DatePicker aria-label="Termen" placeholder="Termen" value={row.deadline} onValueChange={(v) => updateRow(i, { deadline: v })} />
                 <Button type="button" variant="ghost" size="icon" aria-label="Șterge rândul" onClick={() => setFollowUps((rows) => rows.filter((_, j) => j !== i))}>

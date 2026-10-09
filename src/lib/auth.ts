@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canAccessPn, isAllowedEmail, type Actor, type AppRole } from "@/lib/permissions";
 import { escapeLike } from "@/lib/utils";
@@ -51,7 +51,11 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
 
   const existing = await db.from("profiles").select(PROFILE_COLUMNS).eq("clerk_id", userId).maybeSingle();
   if (existing.error) throw new Error("Could not load profile");
-  if (existing.data) return toResult(db, existing.data as unknown as ProfileRow);
+  if (existing.data) {
+    const row = existing.data as unknown as ProfileRow;
+    if (!row.full_name) row.full_name = (await backfillNames([userId])).get(userId) ?? null;
+    return toResult(db, row);
+  }
 
   // --- First sign-in: create the profile from the pending invitation ---
   const user = await currentUser();
@@ -106,6 +110,29 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
   if (created.error) throw new Error("Could not load profile");
   return toResult(db, created.data as unknown as ProfileRow);
 });
+
+// Fills empty profile names from Clerk (the Google account name) and returns id -> name.
+// Profiles created before the name was read, or without one, would otherwise show a raw id.
+export async function backfillNames(ids: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  const clerk = await clerkClient();
+  const { data: users } = await clerk.users.getUserList({ userId: ids, limit: 100 });
+  const db = createAdminClient();
+  await Promise.all(
+    users.map(async (u) => {
+      // No name on the Google account: "antonio.lascu@…" -> "Antonio Lascu".
+      const email = u.emailAddresses.find((e) => e.id === u.primaryEmailAddressId)?.emailAddress ?? u.emailAddresses[0]?.emailAddress;
+      const name =
+        [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+        (email?.split("@")[0].split(/[._-]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") ?? "");
+      if (!name) return;
+      names.set(u.id, name);
+      await db.from("profiles").update({ full_name: name }).eq("clerk_id", u.id).is("full_name", null);
+    }),
+  );
+  return names;
+}
 
 async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRow): Promise<ProfileResult> {
   if (!row.is_active) return { status: "no-access", reason: "inactive" };

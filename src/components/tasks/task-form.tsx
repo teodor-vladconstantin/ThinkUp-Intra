@@ -102,7 +102,7 @@ export function TaskForm({
             name="assigneeId"
             key={departmentId}
             defaultValue={defaults.assigneeId ?? ""}
-            options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? p.clerk_id }))]}
+            options={[{ value: "", label: "Nealocat" }, ...assignable.map((p) => ({ value: p.clerk_id, label: p.full_name ?? "—" }))]}
           />
         </div>
 
