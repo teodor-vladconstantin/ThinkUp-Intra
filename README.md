@@ -1,6 +1,6 @@
 # ThinkUp Intranet
 
-Internal intranet for ThinkUp Academy. Full spec: [PRD.md](PRD.md).
+Internal intranet for ThinkUp Academy. Full spec: [PRD.md](PRD.md). Developer docs: [docs/OVERVIEW.md](docs/OVERVIEW.md).
 
 Stack: Next.js (App Router, TypeScript), bun, Tailwind + shadcn/ui, Clerk, Supabase (Postgres + RLS), Resend.
 
