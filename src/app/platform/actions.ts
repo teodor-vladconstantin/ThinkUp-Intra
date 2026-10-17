@@ -244,7 +244,7 @@ export async function addReview(_prev: FormState, formData: FormData): Promise<F
     .object({ projectId: id, rating: z.coerce.number().int().min(1, "Alege o notă").max(5), body: optionalText(2000) })
     .safeParse(Object.fromEntries(formData));
   if (!me) return fail("Nu ai acces.");
-  if (me.role !== "student") return fail("Doar elevii dau feedback colegilor.");
+  if (!me.isPeerReviewer) return fail("Doar ambasadorii dau feedback colegilor.");
   if (!parsed.success) return fail(parsed.error.issues[0].message);
   const f = parsed.data;
   const { error } = await createUserClient().from("reviews").insert({ project_id: f.projectId, author_id: me.clerkId, rating: f.rating, body: f.body ?? null });

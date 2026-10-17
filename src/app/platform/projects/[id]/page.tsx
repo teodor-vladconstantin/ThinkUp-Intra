@@ -88,7 +88,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const urls = await signedUrls(db, "project-files", [...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
-  const canReview = me.role === "student" && !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
+  const canReview = me.isPeerReviewer && !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
   const candidates = people.list.filter((p) => !memberIds.includes(p.clerk_id));
 
   return (

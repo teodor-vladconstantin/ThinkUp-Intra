@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canAccessPn, isAllowedEmail, type Actor, type AppRole } from "@/lib/permissions";
+import { canAccessPn, isAllowedEmail, isPnMember, type Actor, type AppRole } from "@/lib/permissions";
 import { escapeLike } from "@/lib/utils";
 
 export type Profile = Actor & {
@@ -12,6 +12,7 @@ export type Profile = Actor & {
   departmentName: string | null;
   canAccessPn: boolean;
   canAccessPlatform: boolean; // ambassadors + anyone with PN access (has_platform_access in SQL)
+  isPeerReviewer: boolean; // active ambassador who is not a PN mentor (is_peer_reviewer in SQL)
 };
 
 // "student" is set by the intranet layout, not here: students have a valid profile.
@@ -147,6 +148,8 @@ async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRo
   const platform = await db.rpc("has_platform_access", { p_id: row.clerk_id });
   if (platform.error) throw new Error("Could not check platform access");
   const actor: Actor = { role: row.role, departmentId: row.department_id, isSuperadmin: row.is_superadmin };
+  const ambassador = await db.from("ambassadors").select("id").eq("profile_id", row.clerk_id).eq("active", true).maybeSingle();
+  if (ambassador.error) throw new Error("Could not check ambassador link");
   return {
     status: "ok",
     profile: {
@@ -157,6 +160,7 @@ async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRo
       departmentName: row.departments?.name ?? null,
       canAccessPn: canAccessPn(actor, row.departments?.can_access_pn ?? false),
       canAccessPlatform: platform.data === true,
+      isPeerReviewer: !!ambassador.data && !isPnMember({ ...actor, departmentName: row.departments?.name ?? null }),
     },
   };
 }
