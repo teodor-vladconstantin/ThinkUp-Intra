@@ -17,7 +17,7 @@ export function AmbassadorInviteForm({ ambassadorId, defaultEmail }: { ambassado
         required
         maxLength={200}
         defaultValue={defaultEmail}
-        placeholder="nume@think-up.academy"
+        placeholder="nume@exemplu.ro"
         aria-label="Email pentru contul de platformă"
         className="h-8 max-w-64"
         autoComplete="off"

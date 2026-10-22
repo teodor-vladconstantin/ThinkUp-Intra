@@ -31,7 +31,7 @@ Authorization is layered:
 
 `src/proxy.ts` only exposes the Clerk session; it does not decide access.
 
-Only `@think-up.academy` and `@mentor.think-up.academy` emails can sign in, and the role always comes from the invitation / `profiles` table, never from client data.
+Any email can sign in, but only with a pending invitation for that exact email; the role always comes from the invitation / `profiles` table, never from client data.
 
 ## Code map
 

@@ -16,11 +16,6 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   student: "Elev ambasador",
 };
 
-// Exact domains only, not any subdomain. Some mentors only have the mentor.* address.
-// The domain only decides who may sign in; the role always comes from the invitation.
-export const ALLOWED_EMAIL_DOMAINS = ["think-up.academy", "mentor.think-up.academy"] as const;
-export const ALLOWED_EMAIL_HINT = ALLOWED_EMAIL_DOMAINS.map((d) => `@${d}`).join(" sau ");
-
 export type Actor = {
   role: AppRole;
   departmentId: number | null;
@@ -29,11 +24,6 @@ export type Actor = {
 
 // Optional because only PN rules need it; Profile always has it.
 type MaybeDept = { departmentName?: string | null };
-
-export function isAllowedEmail(email: string) {
-  const [local, domain, ...rest] = email.trim().toLowerCase().split("@");
-  return !!local && rest.length === 0 && (ALLOWED_EMAIL_DOMAINS as readonly string[]).includes(domain ?? "");
-}
 
 // Mirrors is_staff(): anyone but a student. Students never enter the intranet.
 export function isStaff(a: Actor) {

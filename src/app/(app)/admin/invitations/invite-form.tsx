@@ -25,7 +25,7 @@ export function InviteForm({
     <form action={action} className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
       <div className="grid gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required placeholder="nume@think-up.academy" />
+        <Input id="email" name="email" type="email" required placeholder="nume@exemplu.ro" />
       </div>
 
       <div className="grid gap-1.5">

@@ -1,13 +1,11 @@
 import { SignOutButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import type { NoAccessReason } from "@/lib/auth";
-import { ALLOWED_EMAIL_HINT } from "@/lib/permissions";
 
 // Deliberately vague: we never confirm whether an email has an invitation.
 const HINTS: Record<NoAccessReason, string> = {
   inactive: "Contul tău a fost dezactivat.",
   "email-unverified": "Adresa de email nu este verificată.",
-  domain: `Intranetul acceptă doar adrese ${ALLOWED_EMAIL_HINT}.`,
   student: "Contul tău nu este legat încă de o fișă de ambasador.",
   "no-invitation": "Nu am găsit o invitație activă pentru contul tău.",
 };

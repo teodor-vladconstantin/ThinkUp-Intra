@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { sendInvitation } from "@/lib/invitations";
-import { ALLOWED_EMAIL_HINT, canManageZones, isAllowedEmail, isPnMember } from "@/lib/permissions";
+import { canManageZones, isPnMember } from "@/lib/permissions";
 import { SCHOOL_STATUSES } from "@/lib/pn";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -212,7 +212,6 @@ export async function inviteAmbassador(_prev: FormState, formData: FormData): Pr
   const email = z.string().trim().toLowerCase().pipe(z.email("Email invalid")).safeParse(formData.get("email"));
   if (!ambassadorId.success) return { ok: false, message: "Ambasador invalid." };
   if (!email.success) return { ok: false, message: email.error.issues[0].message };
-  if (!isAllowedEmail(email.data)) return { ok: false, message: `Doar adrese ${ALLOWED_EMAIL_HINT}.` };
 
   const db = createUserClient();
   // PN reads staff and student profiles (profiles_read), so an existing account is found here.

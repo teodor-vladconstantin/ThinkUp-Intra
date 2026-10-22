@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canAccessPn, isAllowedEmail, isPnMember, type Actor, type AppRole } from "@/lib/permissions";
+import { canAccessPn, isPnMember, type Actor, type AppRole } from "@/lib/permissions";
 import { escapeLike } from "@/lib/utils";
 
 export type Profile = Actor & {
@@ -16,7 +16,7 @@ export type Profile = Actor & {
 };
 
 // "student" is set by the intranet layout, not here: students have a valid profile.
-export type NoAccessReason = "inactive" | "email-unverified" | "domain" | "no-invitation" | "student";
+export type NoAccessReason = "inactive" | "email-unverified" |"no-invitation" | "student";
 
 export type ProfileResult =
   | { status: "ok"; profile: Profile }
@@ -65,7 +65,6 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
     return { status: "no-access", reason: "email-unverified" };
   }
   const email = primary.emailAddress.toLowerCase();
-  if (!isAllowedEmail(email)) return { status: "no-access", reason: "domain" };
 
   // Case-insensitive exact match: ilike with its wildcards escaped ("_" is legal in emails).
   const pattern = escapeLike(email);

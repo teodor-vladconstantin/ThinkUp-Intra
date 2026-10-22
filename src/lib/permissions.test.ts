@@ -10,7 +10,6 @@ import {
   canMoveTask,
   canWriteMeeting,
   invitableRoles,
-  isAllowedEmail,
   isCd,
   isPnMember,
   isStaff,
@@ -41,17 +40,6 @@ describe("canInvite", () => {
     expect(canInvite(mentorTech, { role: "mentor", departmentId: TECH })).toBe(false);
     expect(invitableRoles(mentorTech)).toEqual([]);
   });
-});
-
-test("isAllowedEmail accepts only the org domain and the mentor subdomain", () => {
-  expect(isAllowedEmail("Ana.Pop@Think-Up.Academy")).toBe(true);
-  expect(isAllowedEmail("ana@mentor.think-up.academy")).toBe(true);
-  expect(isAllowedEmail("ana@gmail.com")).toBe(false);
-  expect(isAllowedEmail("ana@think-up.academy.evil.com")).toBe(false);
-  expect(isAllowedEmail("ana@evilthink-up.academy")).toBe(false);
-  expect(isAllowedEmail("ana@other.think-up.academy")).toBe(false);
-  expect(isAllowedEmail("@think-up.academy")).toBe(false);
-  expect(isAllowedEmail("a@b@think-up.academy")).toBe(false);
 });
 
 describe("students", () => {
