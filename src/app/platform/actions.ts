@@ -145,72 +145,7 @@ export async function deleteGoal(goalId: string): Promise<FormState> {
   return data?.length ? done("Șters.") : fail("Nu ai dreptul.");
 }
 
-// ---------- materials & files ----------
-
-export async function addMaterial(_prev: FormState, formData: FormData): Promise<FormState> {
-  const me = await actor();
-  const parsed = z
-    .object({ projectId: id, name: z.string().trim().min(1, "Numele e obligatoriu").max(200), description: optionalText(5000) })
-    .safeParse(Object.fromEntries(formData));
-  if (!me) return fail("Nu ai acces.");
-  if (!parsed.success) return fail(parsed.error.issues[0].message);
-  const f = parsed.data;
-  const db = createUserClient();
-  const { data: last } = await db.from("materials").select("position").eq("project_id", f.projectId).order("position", { ascending: false }).limit(1);
-  const { error } = await db
-    .from("materials")
-    .insert({ project_id: f.projectId, name: f.name, description: f.description ?? null, position: (last?.[0]?.position ?? -1) + 1, created_by: me.clerkId });
-  return error ? fail("Doar membrii adaugă materiale.") : done("Material adăugat.");
-}
-
-// Swap positions with the neighbour above/below.
-export async function moveMaterial(materialId: string, direction: "up" | "down"): Promise<FormState> {
-  if (!(await actor()) || !id.safeParse(materialId).success || !["up", "down"].includes(direction)) return fail("Cerere invalidă.");
-  const db = createUserClient();
-  const { data: m } = await db.from("materials").select("id, project_id, position").eq("id", materialId).maybeSingle();
-  if (!m) return fail("Material inexistent.");
-  const { data: other } = await db
-    .from("materials")
-    .select("id, position")
-    .eq("project_id", m.project_id)
-    [direction === "up" ? "lt" : "gt"]("position", m.position)
-    .order("position", { ascending: direction === "down" })
-    .limit(1)
-    .maybeSingle();
-  if (!other) return { ok: true, message: "" };
-  // ponytail: two updates, not one transaction; a failure in between leaves equal positions, still ordered by created_at.
-  const a = await db.from("materials").update({ position: other.position }).eq("id", m.id).select("id");
-  if (!a.data?.length) return fail("Nu ai dreptul.");
-  await db.from("materials").update({ position: m.position }).eq("id", other.id);
-  return done("");
-}
-
-export async function deleteMaterial(materialId: string): Promise<FormState> {
-  if (!(await actor()) || !id.safeParse(materialId).success) return fail("Cerere invalidă.");
-  const db = createUserClient();
-  const { data: files } = await db.from("material_files").select("storage_path").eq("material_id", materialId);
-  const { data } = await db.from("materials").delete().eq("id", materialId).select("id");
-  if (!data?.length) return fail("Nu ai dreptul.");
-  if (files?.length) await db.storage.from("project-files").remove(files.map((f) => f.storage_path));
-  return done("Șters.");
-}
-
-export async function attachMaterialFile(materialId: string, file: z.infer<typeof fileMeta>): Promise<FormState> {
-  const f = fileMeta.safeParse(file);
-  if (!(await actor()) || !id.safeParse(materialId).success || !f.success) return fail("Cerere invalidă.");
-  const { error } = await createUserClient()
-    .from("material_files")
-    .insert({ material_id: materialId, storage_path: f.data.path, name: f.data.name, file_type: f.data.type ?? null });
-  return error ? fail("Fișierul nu a putut fi atașat.") : done("Fișier încărcat.");
-}
-
-export async function deleteMaterialFile(fileId: string): Promise<FormState> {
-  if (!(await actor()) || !id.safeParse(fileId).success) return fail("Cerere invalidă.");
-  const { data } = await createUserClient().from("material_files").delete().eq("id", fileId).select("storage_path");
-  if (!data?.length) return fail("Nu ai dreptul.");
-  await removeObject("project-files", data[0].storage_path);
-  return done("Șters.");
-}
+// ---------- project files ----------
 
 export async function addProjectPhoto(projectId: string, file: z.infer<typeof fileMeta>): Promise<FormState> {
   const f = fileMeta.safeParse(file);
@@ -236,10 +171,13 @@ export async function setThumbnail(projectId: string, path: string | null): Prom
   return data?.length ? done("Copertă setată.") : fail("Nu ai dreptul.");
 }
 
-// PDF summary of the project; the old file is removed from Storage when replaced or cleared.
+// PDF summary of the project, set by the ambassadors on the team (not mentors);
+// the old file is removed from Storage when replaced or cleared.
 export async function setProjectSummary(projectId: string, file: z.infer<typeof fileMeta> | null): Promise<FormState> {
+  const me = await actor();
   const f = file === null ? null : fileMeta.safeParse(file);
-  if (!(await actor()) || !id.safeParse(projectId).success || (f && !f.success)) return fail("Cerere invalidă.");
+  if (!me || !id.safeParse(projectId).success || (f && !f.success)) return fail("Cerere invalidă.");
+  if (isPlatformMentor(me)) return fail("Rezumatul îl încarcă ambasadorii.");
   const db = createUserClient();
   const { data: old } = await db.from("projects").select("summary_path").eq("id", projectId).maybeSingle();
   const { data } = await db

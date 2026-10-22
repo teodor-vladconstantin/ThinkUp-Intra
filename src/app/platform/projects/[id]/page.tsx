@@ -12,19 +12,14 @@ import { createUserClient } from "@/lib/supabase/server";
 import {
   addFeedback,
   addGoal,
-  addMaterial,
   addMember,
   addProjectPhoto,
   addReview,
-  attachMaterialFile,
   deleteFeedback,
   deleteGoal,
-  deleteMaterial,
-  deleteMaterialFile,
   deleteProjectPhoto,
   deleteReview,
   gradeProject,
-  moveMaterial,
   removeMember,
   setGoalProgress,
   setProjectArchived,
@@ -49,7 +44,6 @@ type Project = {
   created_at: string;
 };
 type Goal = { id: string; name: string; description: string | null; progress: number; deadline: string | null };
-type Material = { id: string; name: string; description: string | null; files: { id: string; name: string; storage_path: string }[] };
 type Review = { id: string; author_id: string; rating: number; body: string | null; created_at: string };
 type Feedback = { id: string; mentor_id: string; body: string; created_at: string };
 type Grade = { student_id: string; score: number; innovation: number; impact: number; feedback_score: number; efficiency: number; challenge: { name: string } | null };
@@ -69,11 +63,10 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const project = data as Project;
   const mentor = isPlatformMentor(me);
 
-  const [members, photos, goals, materials, reviews, feedback, challenges, grades, people] = await Promise.all([
+  const [members, photos, goals, reviews, feedback, challenges, grades, people] = await Promise.all([
     db.from("project_members").select("profile_id").eq("project_id", project.id),
     db.from("project_photos").select("id, storage_path").eq("project_id", project.id).order("created_at"),
     db.from("goals").select("id, name, description, progress, deadline").eq("project_id", project.id).order("created_at"),
-    db.from("materials").select("id, name, description, files:material_files(id, name, storage_path)").eq("project_id", project.id).order("position").order("created_at"),
     db.from("reviews").select("id, author_id, rating, body, created_at").eq("project_id", project.id).order("created_at", { ascending: false }),
     db.from("mentor_feedback").select("id, mentor_id, body, created_at").eq("project_id", project.id).order("created_at", { ascending: false }),
     db.from("challenges").select("id, name").eq("archived", false).order("created_at", { ascending: false }),
@@ -85,10 +78,9 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const memberIds = (members.data ?? []).map((m) => m.profile_id as string);
   const isMember = memberIds.includes(me.clerkId);
   const photoRows = (photos.data ?? []) as { id: string; storage_path: string }[];
-  const materialRows = (materials.data ?? []) as unknown as Material[];
   const reviewRows = (reviews.data ?? []) as Review[];
   const challengeRows = (challenges.data ?? []) as { id: string; name: string }[];
-  const urls = await signedUrls(db, "project-files", [project.summary_path ?? "", ...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
+  const urls = await signedUrls(db, "project-files", [project.summary_path ?? "", ...photoRows.map((p) => p.storage_path)]);
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
   const canReview = me.isPeerReviewer && !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
@@ -110,11 +102,6 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           {project.challenge_id && <Badge>{challengeRows.find((c) => c.id === project.challenge_id)?.name ?? "Challenge"}</Badge>}
         </div>
         {project.description && <p className="whitespace-pre-wrap text-sm">{project.description}</p>}
-        {project.summary_path && (
-          <a href={urls.get(project.summary_path)} target="_blank" rel="noopener noreferrer" className="inline-block text-sm text-primary underline-offset-2 hover:underline">
-            📄 {project.summary_name ?? "Rezumat (PDF)"}
-          </a>
-        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -161,53 +148,27 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
             </CardContent>
           </Card>
 
-          {/* ---------- materials ---------- */}
+          {/* ---------- summary (PDF) ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Materiale</CardTitle>
+              <CardTitle>Rezumat</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {materialRows.length === 0 && <p className="text-sm text-muted-foreground">Niciun material.</p>}
-              <ol className="space-y-4">
-                {materialRows.map((m, i) => (
-                  <li key={m.id} className="space-y-2 rounded-lg border p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium">{m.name}</span>
-                      {isMember && (
-                        <span className="flex flex-wrap items-center gap-1">
-                          {i > 0 && <ActionButton action={moveMaterial.bind(null, m.id, "up")}>↑</ActionButton>}
-                          {i < materialRows.length - 1 && <ActionButton action={moveMaterial.bind(null, m.id, "down")}>↓</ActionButton>}
-                          <ActionButton action={deleteMaterial.bind(null, m.id)} confirmText="Șterge tot?">
-                            Șterge
-                          </ActionButton>
-                        </span>
-                      )}
-                    </div>
-                    {m.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{m.description}</p>}
-                    <ul className="space-y-1 text-sm">
-                      {m.files.map((f) => (
-                        <li key={f.id} className="flex items-center gap-2">
-                          <a href={urls.get(f.storage_path)} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">
-                            {f.name}
-                          </a>
-                          {isMember && (
-                            <ActionButton action={deleteMaterialFile.bind(null, f.id)} confirmText="Sigur?">
-                              ×
-                            </ActionButton>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    {isMember && <FileUpload bucket="project-files" folder={project.id} label="Încarcă fișier" complete={attachMaterialFile.bind(null, m.id)} />}
-                  </li>
-                ))}
-              </ol>
-              {isMember && (
-                <ActionForm action={addMaterial} submitLabel="Adaugă material">
-                  <input type="hidden" name="projectId" value={project.id} />
-                  <Input name="name" required maxLength={200} placeholder="Material nou" aria-label="Material" />
-                  <textarea name="description" rows={2} maxLength={5000} placeholder="Descriere (opțional)" aria-label="Descriere" className={fieldClass} />
-                </ActionForm>
+            <CardContent className="space-y-3">
+              {!project.summary_path && <p className="text-sm text-muted-foreground">Niciun rezumat încărcat.</p>}
+              {project.summary_path && (
+                <a href={urls.get(project.summary_path)} target="_blank" rel="noopener noreferrer" className="inline-block text-sm text-primary underline-offset-2 hover:underline">
+                  📄 {project.summary_name ?? "Rezumat (PDF)"}
+                </a>
+              )}
+              {isMember && !mentor && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <FileUpload bucket="project-files" folder={project.id} accept="application/pdf" label={project.summary_path ? "Înlocuiește PDF" : "Încarcă PDF"} complete={setProjectSummary.bind(null, project.id)} />
+                  {project.summary_path && (
+                    <ActionButton action={setProjectSummary.bind(null, project.id, null)} confirmText="Sigur?">
+                      Șterge
+                    </ActionButton>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -414,14 +375,6 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                     <Checkbox name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
                   </label>
                 </ActionForm>
-                <div className="flex flex-wrap items-center gap-2">
-                  <FileUpload bucket="project-files" folder={project.id} accept="application/pdf" label={project.summary_path ? "Înlocuiește rezumatul PDF" : "Încarcă rezumat PDF"} complete={setProjectSummary.bind(null, project.id)} />
-                  {project.summary_path && (
-                    <ActionButton action={setProjectSummary.bind(null, project.id, null)} confirmText="Sigur?">
-                      Șterge PDF
-                    </ActionButton>
-                  )}
-                </div>
                 <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">
                   {project.archived ? "Reactivează proiectul" : "Arhivează proiectul"}
                 </ActionButton>
