@@ -236,6 +236,22 @@ export async function setThumbnail(projectId: string, path: string | null): Prom
   return data?.length ? done("Copertă setată.") : fail("Nu ai dreptul.");
 }
 
+// PDF summary of the project; the old file is removed from Storage when replaced or cleared.
+export async function setProjectSummary(projectId: string, file: z.infer<typeof fileMeta> | null): Promise<FormState> {
+  const f = file === null ? null : fileMeta.safeParse(file);
+  if (!(await actor()) || !id.safeParse(projectId).success || (f && !f.success)) return fail("Cerere invalidă.");
+  const db = createUserClient();
+  const { data: old } = await db.from("projects").select("summary_path").eq("id", projectId).maybeSingle();
+  const { data } = await db
+    .from("projects")
+    .update({ summary_path: f?.data?.path ?? null, summary_name: f?.data?.name ?? null })
+    .eq("id", projectId)
+    .select("id");
+  if (!data?.length) return fail("Nu ai dreptul.");
+  if (old?.summary_path && old.summary_path !== f?.data?.path) await removeObject("project-files", old.summary_path);
+  return done(f ? "Rezumat încărcat." : "Șters.");
+}
+
 // ---------- reviews & mentor feedback ----------
 
 export async function addReview(_prev: FormState, formData: FormData): Promise<FormState> {

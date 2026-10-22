@@ -28,6 +28,7 @@ import {
   removeMember,
   setGoalProgress,
   setProjectArchived,
+  setProjectSummary,
   setThumbnail,
   updateProject,
 } from "../../actions";
@@ -41,6 +42,8 @@ type Project = {
   created_by: string;
   challenge_id: string | null;
   thumbnail_path: string | null;
+  summary_path: string | null;
+  summary_name: string | null;
   accept_reviews: boolean;
   archived: boolean;
   created_at: string;
@@ -59,7 +62,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const db = createUserClient();
   const { data } = await db
     .from("projects")
-    .select("id, name, description, created_by, challenge_id, thumbnail_path, accept_reviews, archived, created_at")
+    .select("id, name, description, created_by, challenge_id, thumbnail_path, summary_path, summary_name, accept_reviews, archived, created_at")
     .eq("id", pid.data)
     .maybeSingle();
   if (!data) notFound();
@@ -85,7 +88,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const materialRows = (materials.data ?? []) as unknown as Material[];
   const reviewRows = (reviews.data ?? []) as Review[];
   const challengeRows = (challenges.data ?? []) as { id: string; name: string }[];
-  const urls = await signedUrls(db, "project-files", [...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
+  const urls = await signedUrls(db, "project-files", [project.summary_path ?? "", ...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
   const canReview = me.isPeerReviewer && !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
@@ -107,6 +110,11 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           {project.challenge_id && <Badge>{challengeRows.find((c) => c.id === project.challenge_id)?.name ?? "Challenge"}</Badge>}
         </div>
         {project.description && <p className="whitespace-pre-wrap text-sm">{project.description}</p>}
+        {project.summary_path && (
+          <a href={urls.get(project.summary_path)} target="_blank" rel="noopener noreferrer" className="inline-block text-sm text-primary underline-offset-2 hover:underline">
+            📄 {project.summary_name ?? "Rezumat (PDF)"}
+          </a>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -406,6 +414,14 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                     <Checkbox name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
                   </label>
                 </ActionForm>
+                <div className="flex flex-wrap items-center gap-2">
+                  <FileUpload bucket="project-files" folder={project.id} accept="application/pdf" label={project.summary_path ? "Înlocuiește rezumatul PDF" : "Încarcă rezumat PDF"} complete={setProjectSummary.bind(null, project.id)} />
+                  {project.summary_path && (
+                    <ActionButton action={setProjectSummary.bind(null, project.id, null)} confirmText="Sigur?">
+                      Șterge PDF
+                    </ActionButton>
+                  )}
+                </div>
                 <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">
                   {project.archived ? "Reactivează proiectul" : "Arhivează proiectul"}
                 </ActionButton>
