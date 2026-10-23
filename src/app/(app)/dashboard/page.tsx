@@ -38,7 +38,7 @@ export default async function DashboardPage() {
       />
 
       <div className="grid gap-4">
-        <Card>
+        <Card data-tour="dash-tasks">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Sarcinile mele</CardTitle>
             <Button asChild variant="outline" size="sm">

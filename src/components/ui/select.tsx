@@ -70,6 +70,7 @@ function Select({
           const next = v === EMPTY ? "" : v
           if (controlled === undefined) setInner(next)
           onValueChange?.(next)
+          hidden.current?.dispatchEvent(new Event("input", { bubbles: true })) // lets a form (autosave) see the change
         }}
       >
         <SelectPrimitive.Trigger

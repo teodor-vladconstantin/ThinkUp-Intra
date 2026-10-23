@@ -40,7 +40,7 @@ export default async function UsersPage() {
         </p>
       </div>
 
-      <ul className="divide-y rounded-xl border bg-card">
+      <ul className="divide-y rounded-xl border bg-card" data-tour="users-list">
         {users.map((u) => {
           const target = { clerkId: u.clerk_id, role: u.role, departmentId: u.department_id, isSuperadmin: u.is_superadmin };
           return (

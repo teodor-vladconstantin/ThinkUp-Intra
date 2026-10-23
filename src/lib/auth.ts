@@ -14,6 +14,7 @@ export type Profile = Actor & {
   canAccessPlatform: boolean; // ambassadors + anyone with PN access (has_platform_access in SQL)
   isPeerReviewer: boolean; // active ambassador who is not a PN mentor (is_peer_reviewer in SQL)
   onboardingVersion: number; // last onboarding tour version finished or closed
+  onboardingSections: string[]; // pages whose own tour was already shown
 };
 
 // "student" is set by the intranet layout, not here: students have a valid profile.
@@ -24,7 +25,7 @@ export type ProfileResult =
   | { status: "no-access"; reason: NoAccessReason };
 
 const PROFILE_COLUMNS =
-  "clerk_id, email, full_name, role, department_id, is_superadmin, is_active, onboarding_version, departments(name, can_access_pn)";
+  "clerk_id, email, full_name, role, department_id, is_superadmin, is_active, onboarding_version, onboarding_sections, departments(name, can_access_pn)";
 
 type ProfileRow = {
   clerk_id: string;
@@ -35,6 +36,7 @@ type ProfileRow = {
   is_superadmin: boolean;
   is_active: boolean;
   onboarding_version: number;
+  onboarding_sections: string[];
   departments: { name: string; can_access_pn: boolean } | null;
 };
 
@@ -162,6 +164,7 @@ async function toResult(db: ReturnType<typeof createAdminClient>, row: ProfileRo
       canAccessPn: canAccessPn(actor, row.departments?.can_access_pn ?? false),
       canAccessPlatform: platform.data === true,
       onboardingVersion: row.onboarding_version,
+      onboardingSections: row.onboarding_sections,
       isPeerReviewer: !!ambassador.data && !isPnMember({ ...actor, departmentName: row.departments?.name ?? null }),
     },
   };

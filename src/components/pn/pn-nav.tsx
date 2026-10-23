@@ -14,7 +14,7 @@ const TABS = [
 export function PnNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-wrap gap-2 text-sm" aria-label="Program Național">
+    <nav className="flex flex-wrap gap-2 text-sm" aria-label="Program Național" data-tour="pn-tabs">
       {TABS.map((t) => {
         const active = t.href === "/pn" ? pathname === "/pn" : pathname.startsWith(t.href);
         return (

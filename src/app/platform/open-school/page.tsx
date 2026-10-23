@@ -49,7 +49,7 @@ export default async function OpenSchoolPage(props: PageProps<"/platform/open-sc
       <div className="space-y-3">
         <SectionLabel>Platforma ambasadorilor</SectionLabel>
         <h1 className="text-2xl font-semibold">Open School</h1>
-        <form className="flex max-w-md gap-2" action="/platform/open-school">
+        <form className="flex max-w-md gap-2" action="/platform/open-school" data-tour="os-search">
           <Input name="q" defaultValue={q} maxLength={100} placeholder="Caută după nume" aria-label="Caută" />
           <Button type="submit" variant="outline">
             Caută
@@ -63,7 +63,7 @@ export default async function OpenSchoolPage(props: PageProps<"/platform/open-sc
       </div>
 
       {mentor && (
-        <Card>
+        <Card data-tour="os-add">
           <CardHeader>
             <CardTitle>Adaugă în bibliotecă</CardTitle>
           </CardHeader>

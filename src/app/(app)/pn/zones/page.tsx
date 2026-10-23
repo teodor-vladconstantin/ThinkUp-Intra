@@ -24,7 +24,7 @@ export default async function ZonesPage() {
       <h1 className="text-2xl font-semibold">Zone de dezvoltare</h1>
 
       {canManage && (
-        <Card>
+        <Card data-tour="new-zone">
           <CardHeader>
             <CardTitle>Zonă nouă</CardTitle>
           </CardHeader>
@@ -37,7 +37,7 @@ export default async function ZonesPage() {
       {(zones ?? []).length === 0 ? (
         <p className="text-sm text-muted-foreground">Nicio zonă încă. Județele apar gri pe hartă până primesc o zonă.</p>
       ) : (
-        <ul className="divide-y rounded-xl border bg-card">
+        <ul className="divide-y rounded-xl border bg-card" data-tour="zones-list">
           {(zones as Zone[]).map((z) => (
             <li key={z.id} className="flex flex-wrap items-center gap-3 p-4">
               {canManage ? (

@@ -44,7 +44,7 @@ export default async function DocumentsPage() {
       </div>
 
       {canCreateDocument(profile) && (
-        <Card>
+        <Card data-tour="new-document">
           <CardHeader>
             <CardTitle>Adaugă un document</CardTitle>
           </CardHeader>

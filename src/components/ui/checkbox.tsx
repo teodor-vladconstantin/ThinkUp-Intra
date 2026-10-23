@@ -46,6 +46,7 @@ function Checkbox({ name, value = "on", checked: controlled, defaultChecked = fa
           const next = !checked
           if (controlled === undefined) setInner(next)
           onCheckedChange?.(next)
+          field.current?.dispatchEvent(new Event("input", { bubbles: true })) // lets a form (autosave) see the change
         }}
         className={cn(
           "flex size-5 shrink-0 items-center justify-center rounded-[6px] md:size-4 md:rounded-[5px] border border-input bg-card shadow-xs outline-none transition-colors",

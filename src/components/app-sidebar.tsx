@@ -74,7 +74,7 @@ export const NAV: NavItem[] = [
 
 // The ambassadors platform: ambassadors and people with PN access.
 export const PLATFORM_NAV: NavItem[] = [
-  { href: "/platform/projects", label: "Proiecte", icon: FolderKanban, hint: "Proiectele ambasadorilor. Textul din Setări se salvează doar cu butonul Salvează; pozele și PDF-ul se salvează imediat.", visible: (u) => u.canAccessPlatform },
+  { href: "/platform/projects", label: "Proiecte", icon: FolderKanban, hint: "Proiectele ambasadorilor. Setările proiectului se salvează singure, iar pozele și PDF-ul se salvează imediat.", visible: (u) => u.canAccessPlatform },
   { href: "/platform/challenges", label: "Challenge-uri", icon: Trophy, hint: "Challenge-urile active și notele primite pe criterii.", visible: (u) => u.canAccessPlatform },
   { href: "/platform/open-school", label: "Open School", icon: BookOpen, hint: "Open School: materialele și activitatea ta.", visible: (u) => u.canAccessPlatform },
   { href: "/platform/me", label: "Profilul meu", icon: UserRound, hint: "Profilul tău: proiectele, notele și progresul.", visible: (u) => u.canAccessPlatform },

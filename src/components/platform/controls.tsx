@@ -28,27 +28,89 @@ export function ActionForm({
   children,
   className,
   keep = false,
+  autosave = false,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
   children: React.ReactNode;
   className?: string;
   keep?: boolean; // keep values after success (edit forms)
+  autosave?: boolean; // edit forms: saves ~1.5 s after the last change; the button still saves at once
 }) {
-  const [state, formAction, pending] = useActionState<FormState, FormData>(action, null);
+  const [formState, formAction, formPending] = useActionState<FormState, FormData>(action, null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    if (state?.ok && !keep) ref.current?.reset();
-  }, [state, keep]);
+    if (formState?.ok && !keep) ref.current?.reset();
+  }, [formState, keep]);
 
+  // Autosave posts the FormData by hand instead of through <form action>: React resets an
+  // uncontrolled form after an action, which would wipe what the person typed while saving.
+  const [autoState, setAutoState] = useState<FormState>(null);
+  const [saving, setSaving] = useState(false);
+  const [unsaved, setUnsaved] = useState(false);
+  const savingRef = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  async function save() {
+    const form = ref.current;
+    if (!form || !form.reportValidity()) return;
+    if (savingRef.current) return void (timer.current = setTimeout(save, 500)); // one save at a time
+    savingRef.current = true;
+    setSaving(true);
+    setUnsaved(false);
+    try {
+      setAutoState(await action(null, new FormData(form)));
+    } catch {
+      setAutoState({ ok: false, message: "Nu s-a putut salva." });
+      setUnsaved(true);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  // Native listener: the hidden inputs of Select/Checkbox only fire a plain DOM "input" event,
+  // which React's onChange ignores for type=hidden.
+  useEffect(() => {
+    const form = ref.current;
+    if (!autosave || !form) return;
+    const changed = () => {
+      setUnsaved(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(save, 1500);
+    };
+    form.addEventListener("input", changed);
+    return () => form.removeEventListener("input", changed);
+  });
+
+  const state = autosave ? autoState : formState;
+  const pending = autosave ? saving : formPending;
   return (
-    <form ref={ref} action={formAction} className={cn("grid gap-2", className)}>
+    <form
+      ref={ref}
+      {...(autosave
+        ? {
+            onSubmit: (e: React.FormEvent) => {
+              e.preventDefault();
+              clearTimeout(timer.current);
+              void save();
+            },
+          }
+        : { action: formAction })}
+      className={cn("grid gap-2", className)}
+    >
       {children}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="outline" disabled={pending} className="rounded-full">
+        <Button type="submit" disabled={pending} className="rounded-full">
           {pending ? "Se salvează…" : submitLabel}
         </Button>
-        <Status state={state} />
+        {autosave && unsaved && !pending ? <p className="text-sm text-muted-foreground">Modificări nesalvate…</p> : <Status state={state} />}
       </div>
     </form>
   );

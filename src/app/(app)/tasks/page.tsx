@@ -44,7 +44,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </Button>
       </div>
 
-      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Filtre">
+      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Filtre" data-tour="tasks-filters">
         {isMentor && (
           <>
             <FilterLink href="/tasks" active={scope === "dept" && !overdueOnly}>Tot departamentul</FilterLink>

@@ -47,7 +47,7 @@ export default async function DecisionsPage(props: PageProps<"/decisions">) {
       </div>
 
       {/* Plain GET form: the filters live in the URL, so a search can be shared as a link. */}
-      <form className="flex flex-wrap items-center gap-2" role="search">
+      <form className="flex flex-wrap items-center gap-2" role="search" data-tour="decisions-search">
         <Input name="q" defaultValue={q} placeholder="Caută în decizii" aria-label="Caută în decizii" className="max-w-sm" />
         <Select
           name="scope"

@@ -16,7 +16,7 @@ export function AmbassadorContactForm({ id, email, phone }: { id: number; email:
         <Input name="email" type="email" required maxLength={200} defaultValue={email ?? ""} placeholder="Email de contact" aria-label="Email de contact" autoComplete="off" />
         <Input name="phone" type="tel" required maxLength={40} defaultValue={phone ?? ""} placeholder="Telefon" aria-label="Telefon" autoComplete="off" />
         <div className="flex items-center gap-2">
-          <Button type="submit" size="sm" variant="outline" disabled={pending}>
+          <Button type="submit" size="sm" disabled={pending}>
             Salvează
           </Button>
           {state && <span role="status" className={state.ok ? "text-success" : "text-destructive"}>{state.message}</span>}

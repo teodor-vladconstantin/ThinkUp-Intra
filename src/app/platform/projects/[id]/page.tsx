@@ -106,12 +106,12 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
 
       {/* ---------- settings (on top so the Save button is not missed; text edits are not autosaved) ---------- */}
       {isMember && (
-        <Card>
+        <Card data-tour="project-settings">
           <CardHeader>
             <CardTitle>Setări</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <ActionForm action={updateProject} submitLabel="Salvează" keep>
+            <ActionForm action={updateProject} submitLabel="Salvează" keep autosave>
               <input type="hidden" name="id" value={project.id} />
               <Input name="name" required maxLength={150} defaultValue={project.name} aria-label="Nume" />
               <textarea name="description" rows={4} maxLength={5000} defaultValue={project.description ?? ""} aria-label="Descriere" className={fieldClass} />
@@ -135,7 +135,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           {/* ---------- goals ---------- */}
-          <Card>
+          <Card data-tour="project-goals">
             <CardHeader>
               <CardTitle>Obiective</CardTitle>
             </CardHeader>
@@ -177,7 +177,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           </Card>
 
           {/* ---------- summary (PDF) ---------- */}
-          <Card>
+          <Card data-tour="project-summary">
             <CardHeader>
               <CardTitle>Rezumat</CardTitle>
             </CardHeader>
@@ -202,7 +202,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           </Card>
 
           {/* ---------- photos ---------- */}
-          <Card>
+          <Card data-tour="project-gallery">
             <CardHeader>
               <CardTitle>Galerie</CardTitle>
             </CardHeader>
@@ -229,7 +229,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
           </Card>
 
           {/* ---------- reviews ---------- */}
-          <Card>
+          <Card data-tour="project-reviews">
             <CardHeader>
               <CardTitle>Feedback de la colegi</CardTitle>
             </CardHeader>
@@ -270,7 +270,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
 
         <div className="space-y-6">
           {/* ---------- members ---------- */}
-          <Card>
+          <Card data-tour="project-team">
             <CardHeader>
               <CardTitle>Echipă</CardTitle>
             </CardHeader>

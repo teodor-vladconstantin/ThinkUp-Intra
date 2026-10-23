@@ -24,7 +24,7 @@ export default async function AnnouncementsPage() {
       </div>
 
       {canPostAnnouncement(profile) && (
-        <Card>
+        <Card data-tour="new-announcement">
           <CardHeader>
             <CardTitle>Anunț nou</CardTitle>
           </CardHeader>

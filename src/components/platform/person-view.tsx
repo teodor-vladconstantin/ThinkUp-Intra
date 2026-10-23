@@ -101,7 +101,7 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
 
       <div className="grid gap-6 lg:grid-cols-2">
         {privateVisible && <StreakCard personId={personId} points={(thisYear?.score ?? 0) + (thisYear?.bonus ?? 0)} />}
-        <Card>
+        <Card data-tour="person-projects">
           <CardHeader>
             <CardTitle>Proiecte</CardTitle>
           </CardHeader>
@@ -230,7 +230,7 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
         )}
 
         {privateVisible && (
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2" data-tour="person-goals">
             <CardHeader>
               <CardTitle>Obiective personale</CardTitle>
             </CardHeader>

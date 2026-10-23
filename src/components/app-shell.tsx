@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import { AppSidebar } from "@/components/app-sidebar";
-import { OnboardingTour } from "@/components/onboarding-tour";
+import { OnboardingTour, PageTourButton } from "@/components/onboarding-tour";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import type { Profile } from "@/lib/auth";
 
@@ -19,13 +19,16 @@ export function AppShell({ profile, banner, children }: { profile: Profile; bann
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <OnboardingTour user={user} version={profile.onboardingVersion} />
+      <OnboardingTour user={user} version={profile.onboardingVersion} seenSections={profile.onboardingSections} />
       <SidebarInset className="min-w-0 bg-workspace">
         {/* Dark, glassy header that stays on top while the work area scrolls */}
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-sidebar-border bg-sidebar/95 px-4 text-sidebar-foreground backdrop-blur-md">
           <SidebarTrigger />
-          <div className="ml-auto" data-tour="user">
-            <UserButton />
+          <div className="ml-auto flex items-center gap-2">
+            <PageTourButton />
+            <div data-tour="user">
+              <UserButton />
+            </div>
           </div>
         </header>
         {banner}

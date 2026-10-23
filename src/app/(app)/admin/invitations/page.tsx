@@ -55,7 +55,7 @@ export default async function InvitationsPage() {
       </div>
 
       {roles.length > 0 && (
-        <Card>
+        <Card data-tour="invite-card">
           <CardHeader>
             <CardTitle>Invită o persoană</CardTitle>
           </CardHeader>
@@ -69,7 +69,7 @@ export default async function InvitationsPage() {
         </Card>
       )}
 
-      <Card>
+      <Card data-tour="invites-sent">
         <CardHeader>
           <CardTitle>Invitații trimise</CardTitle>
         </CardHeader>

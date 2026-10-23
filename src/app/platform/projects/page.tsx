@@ -57,7 +57,7 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
       <div className="space-y-3">
         <SectionLabel>Platforma ambasadorilor</SectionLabel>
         <h1 className="text-2xl font-semibold">Proiecte</h1>
-        <nav className="flex flex-wrap gap-2" aria-label="Filtru proiecte">
+        <nav className="flex flex-wrap gap-2" aria-label="Filtru proiecte" data-tour="project-tabs">
           {tab("Toate", "/platform/projects", !mine && !archived)}
           {tab("Ale mele", "/platform/projects?mine=1", mine)}
           {tab("Arhivate", "/platform/projects?archived=1", archived)}

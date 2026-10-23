@@ -33,7 +33,7 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Licee</h1>
 
-      <form className="flex flex-wrap items-center gap-2" role="search">
+      <form className="flex flex-wrap items-center gap-2" role="search" data-tour="schools-search">
         <Input name="q" defaultValue={q} placeholder="Caută liceul" aria-label="Caută liceul" className="max-w-xs" />
         <Select
           name="county"
@@ -64,7 +64,7 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
       {schools.length === 0 ? (
         <p className="text-sm text-muted-foreground">Niciun liceu.</p>
       ) : (
-        <ul className="divide-y rounded-xl border bg-card">
+        <ul className="divide-y rounded-xl border bg-card" data-tour="schools-list">
           {schools.map((s) => (
             <li key={s.id}>
               <Link href={`/pn/schools/${s.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4 hover:bg-muted/50">

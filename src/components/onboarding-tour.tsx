@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { CircleHelp } from "lucide-react";
 import { driver, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import { completeOnboarding } from "@/app/onboarding-actions";
+import { completeOnboarding, markSectionSeen } from "@/app/onboarding-actions";
 import { NAV, PLATFORM_NAV, type SidebarUser } from "@/components/app-sidebar";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ONBOARDING_VERSION } from "@/lib/onboarding";
+import { findSection } from "@/lib/section-tours";
 
 type Step = {
   path?: string; // the page this step lives on; the tour navigates there
@@ -23,7 +25,7 @@ const KEY = "thinkup-tour-step"; // survives the intranet <-> platform layout sw
 // missing for this role (e.g. only mentors see "Challenge nou") is skipped.
 const PAGE_STEPS: Record<string, Omit<Step, "path">> = {
   "/tasks": { selector: '[data-tour="new-task"]', title: "Sarcină nouă", text: "De aici creezi o sarcină: titlu, responsabil și termen." },
-  "/platform/projects": { selector: '[data-tour="new-project"]', title: "Proiect nou", text: "Aici creezi un proiect. După ce îl deschizi, textul din Setări se salvează doar cu butonul Salvează." },
+  "/platform/projects": { selector: '[data-tour="new-project"]', title: "Proiect nou", text: "Aici creezi un proiect. După ce îl deschizi, setările lui se salvează singure." },
   "/platform/challenges": { selector: '[data-tour="new-challenge"]', title: "Challenge nou", text: "Mentorii creează aici challenge-uri, apoi notează proiectele care participă." },
 };
 
@@ -38,8 +40,8 @@ function buildSteps(user: SidebarUser): Step[] {
   return steps;
 }
 
-async function present(selector: string) {
-  for (let n = 0; n < 50; n++) {
+async function present(selector: string, tries = 50) {
+  for (let n = 0; n < tries; n++) {
     if (document.querySelector(selector)) return true;
     await new Promise((r) => setTimeout(r, 100));
   }
@@ -55,8 +57,10 @@ const store = {
 // Guided tour for every user: starts when the profile's onboarding_version is behind
 // ONBOARDING_VERSION (so also for existing users), walks through the sections the user can
 // see, navigating to each one. Closing it counts as done; "Tur ghidat" in the sidebar replays it.
-export function OnboardingTour({ user, version }: { user: SidebarUser; version: number }) {
+export function OnboardingTour({ user, version, seenSections }: { user: SidebarUser; version: number; seenSections: string[] }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [mainDone, setMainDone] = useState(version >= ONBOARDING_VERSION); // page tours wait for the main tour
   const { isMobile } = useSidebar();
   const live = useRef({ router, isMobile, user });
   useEffect(() => {
@@ -75,6 +79,7 @@ export function OnboardingTour({ user, version }: { user: SidebarUser; version: 
       teardown();
       store.clear();
       await completeOnboarding();
+      window.dispatchEvent(new Event("thinkup:tour-done"));
     }
     async function show(i: number, dir: 1 | -1): Promise<void> {
       const { router, isMobile, user } = live.current;
@@ -118,5 +123,82 @@ export function OnboardingTour({ user, version }: { user: SidebarUser; version: 
     };
   }, [version]);
 
+  useEffect(() => {
+    const done = () => setMainDone(true);
+    window.addEventListener("thinkup:tour-done", done);
+    return () => window.removeEventListener("thinkup:tour-done", done);
+  }, []);
+
+  // The current page's own tour: first visit after the main tour, or on "Ghid pagină".
+  const seen = useRef(new Set(seenSections));
+  useEffect(() => {
+    const section = findSection(pathname);
+    let stop = () => {};
+    async function run() {
+      if (!section) return;
+      stop();
+      let dead = false;
+      let d: Driver | null = null;
+      stop = () => {
+        dead = true;
+        d?.destroy();
+      };
+      if (!seen.current.has(section.key)) {
+        seen.current.add(section.key);
+        void markSectionSeen(section.key);
+      }
+      const show = async (i: number, dir: 1 | -1): Promise<void> => {
+        if (dead) return;
+        d?.destroy();
+        d = null;
+        if (i < 0) return show(0, 1);
+        if (i >= section.steps.length) return;
+        const s = section.steps[i];
+        if (s.selector && !(await present(s.selector, 5))) return show(i + dir, dir); // not for this role
+        if (dead) return;
+        d = driver({ overlayClickBehavior: () => {}, allowClose: true });
+        d.highlight({
+          element: s.selector,
+          popover: {
+            title: s.title,
+            description: s.text,
+            showButtons: i === 0 ? ["next", "close"] : ["previous", "next", "close"],
+            showProgress: true,
+            progressText: `${i + 1} din ${section.steps.length}`,
+            nextBtnText: i === section.steps.length - 1 ? "Gata" : "Înainte",
+            prevBtnText: "Înapoi",
+            onNextClick: () => void show(i + 1, 1),
+            onPrevClick: () => void show(i - 1, -1),
+            onCloseClick: () => stop(),
+          },
+        });
+      };
+      await show(0, 1);
+    }
+    const replay = () => void run();
+    window.addEventListener("thinkup:page-tour", replay);
+    const timer = section && mainDone && !seen.current.has(section.key) ? setTimeout(replay, 800) : undefined;
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("thinkup:page-tour", replay);
+      stop();
+    };
+  }, [pathname, mainDone]);
+
   return null;
+}
+
+// Header button: replays the tour of the page the person is on (only where one exists).
+export function PageTourButton() {
+  if (!findSection(usePathname())) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event("thinkup:page-tour"))}
+      className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm hover:bg-sidebar-accent max-md:py-2"
+    >
+      <CircleHelp className="size-4" aria-hidden />
+      <span className="max-sm:sr-only">Ghid pagină</span>
+    </button>
+  );
 }

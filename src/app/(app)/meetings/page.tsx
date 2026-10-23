@@ -28,7 +28,7 @@ export default async function MeetingsPage() {
           <h1 className="text-2xl font-semibold">Ședințe și minute</h1>
         </div>
         {canCreate && (
-          <Button asChild>
+          <Button asChild data-tour="new-meeting">
             <Link href="/meetings/new">Ședință nouă</Link>
           </Button>
         )}

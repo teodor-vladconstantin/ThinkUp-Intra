@@ -92,7 +92,7 @@ export default async function GalleryPage(props: PageProps<"/platform/gallery">)
       </div>
 
       {/* Plain GET form: the filters live in the URL, so a view can be shared as a link. */}
-      <form className="flex flex-wrap items-center gap-2" action="/platform/gallery" role="search">
+      <form className="flex flex-wrap items-center gap-2" action="/platform/gallery" role="search" data-tour="gallery-search">
         <Select
           name="challenge"
           defaultValue={challengeParam}

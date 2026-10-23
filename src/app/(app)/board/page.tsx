@@ -39,7 +39,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
         <h1 className="text-2xl font-semibold">Departamentul {dept.name}</h1>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-sm" data-tour="board-views">
         {allowed.length > 1 &&
           allowed.map((d) => (
             <Pill key={d.id} href={href({ dept: d.id })} active={d.id === dept.id}>
@@ -61,7 +61,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
         // Horizontal scroll on phones, four columns on wide screens. "relative": the scroller must be
         // the containing block of the cards' hidden (absolute) elements, or they escape the clipping
         // and widen the whole page.
-        <div className="relative -mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+        <div className="relative -mx-4 overflow-x-auto px-4 md:mx-0 md:px-0" data-tour="board-columns">
           <div className="grid min-w-[56rem] grid-cols-4 gap-4">
             {STATUSES.map((s) => {
               const column = tasks.filter((t) => t.status === s);
