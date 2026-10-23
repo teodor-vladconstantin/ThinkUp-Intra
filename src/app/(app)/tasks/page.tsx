@@ -39,7 +39,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
           <SectionLabel>Sarcini</SectionLabel>
           <h1 className="text-2xl font-semibold">{overdueOnly ? "Sarcini întârziate" : "Sarcinile mele"}</h1>
         </div>
-        <Button asChild>
+        <Button asChild data-tour="new-task">
           <Link href="/tasks/new">Sarcină nouă</Link>
         </Button>
       </div>

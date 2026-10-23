@@ -104,6 +104,34 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
         {project.description && <p className="whitespace-pre-wrap text-sm">{project.description}</p>}
       </div>
 
+      {/* ---------- settings (on top so the Save button is not missed; text edits are not autosaved) ---------- */}
+      {isMember && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Setări</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ActionForm action={updateProject} submitLabel="Salvează" keep>
+              <input type="hidden" name="id" value={project.id} />
+              <Input name="name" required maxLength={150} defaultValue={project.name} aria-label="Nume" />
+              <textarea name="description" rows={4} maxLength={5000} defaultValue={project.description ?? ""} aria-label="Descriere" className={fieldClass} />
+              <Select
+                name="challengeId"
+                aria-label="Challenge"
+                defaultValue={project.challenge_id ?? ""}
+                options={[{ value: "", label: "Fără challenge" }, ...challengeRows.map((c) => ({ value: c.id, label: c.name }))]}
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
+              </label>
+            </ActionForm>
+            <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">
+              {project.archived ? "Reactivează proiectul" : "Arhivează proiectul"}
+            </ActionButton>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           {/* ---------- goals ---------- */}
@@ -350,34 +378,6 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                     <textarea name="feedback" rows={2} maxLength={5000} placeholder="Comentariu (opțional)" aria-label="Comentariu" className={fieldClass} />
                   </ActionForm>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ---------- settings ---------- */}
-          {isMember && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Setări</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ActionForm action={updateProject} submitLabel="Salvează" keep>
-                  <input type="hidden" name="id" value={project.id} />
-                  <Input name="name" required maxLength={150} defaultValue={project.name} aria-label="Nume" />
-                  <textarea name="description" rows={4} maxLength={5000} defaultValue={project.description ?? ""} aria-label="Descriere" className={fieldClass} />
-                  <Select
-                    name="challengeId"
-                    aria-label="Challenge"
-                    defaultValue={project.challenge_id ?? ""}
-                    options={[{ value: "", label: "Fără challenge" }, ...challengeRows.map((c) => ({ value: c.id, label: c.name }))]}
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox name="acceptReviews" defaultChecked={project.accept_reviews} /> Acceptă feedback de la colegi
-                  </label>
-                </ActionForm>
-                <ActionButton action={setProjectArchived.bind(null, project.id, !project.archived)} variant="outline" confirmText="Confirmă">
-                  {project.archived ? "Reactivează proiectul" : "Arhivează proiectul"}
-                </ActionButton>
               </CardContent>
             </Card>
           )}

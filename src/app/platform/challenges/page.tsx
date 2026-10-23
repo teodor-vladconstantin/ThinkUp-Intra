@@ -49,7 +49,7 @@ export default async function ChallengesPage(props: PageProps<"/platform/challen
       </div>
 
       {mentor && !archived && (
-        <Card>
+        <Card data-tour="new-challenge">
           <CardHeader>
             <CardTitle>Challenge nou</CardTitle>
           </CardHeader>

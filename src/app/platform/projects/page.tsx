@@ -64,7 +64,7 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
         </nav>
       </div>
 
-      <Card>
+      <Card data-tour="new-project">
         <CardHeader>
           <CardTitle>Proiect nou</CardTitle>
         </CardHeader>

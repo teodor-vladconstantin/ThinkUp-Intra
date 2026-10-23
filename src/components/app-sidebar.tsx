@@ -45,10 +45,11 @@ export type SidebarUser = Actor & {
   canAccessPlatform: boolean;
 };
 
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  hint: string; // shown by the onboarding tour
   visible: (u: SidebarUser) => boolean;
   soon?: boolean; // built in a later phase: shown, but not clickable yet
 };
@@ -57,28 +58,28 @@ type NavItem = {
 // Intranet items need staff; students only ever see the platform group.
 const staff = (more: (u: SidebarUser) => boolean = () => true) => (u: SidebarUser) => isStaff(u) && more(u);
 
-const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Acasă", icon: LayoutDashboard, visible: staff() },
-  { href: "/tasks", label: "Sarcini", icon: ListChecks, visible: staff() },
-  { href: "/board", label: "Board", icon: KanbanSquare, visible: staff() },
-  { href: "/leadership", label: "Întârzieri", icon: TriangleAlert, visible: staff(isCd) },
-  { href: "/meetings", label: "Ședințe", icon: CalendarDays, visible: staff() },
-  { href: "/decisions", label: "Decizii", icon: Gavel, visible: staff() },
-  { href: "/documents", label: "Documente", icon: FileText, visible: staff() },
-  { href: "/announcements", label: "Anunțuri", icon: Megaphone, visible: staff() },
-  { href: "/pn", label: "Program Național", icon: Map, visible: staff((u) => u.canAccessPn) },
-  { href: "/admin/invitations", label: "Invitații", icon: UserPlus, visible: staff(canSeeInvitations) },
-  { href: "/admin/users", label: "Utilizatori", icon: Users, visible: staff(canSeeInvitations) },
+export const NAV: NavItem[] = [
+  { href: "/dashboard", label: "Acasă", icon: LayoutDashboard, hint: "Prima pagină: sarcinile tale și ce s-a mai întâmplat de curând.", visible: staff() },
+  { href: "/tasks", label: "Sarcini", icon: ListChecks, hint: "Aici găsești sarcinile tale și ale departamentului. Termenele depășite apar și într-o bandă roșie, sus.", visible: staff() },
+  { href: "/board", label: "Board", icon: KanbanSquare, hint: "Aceleași sarcini, pe coloane după stare. Le muți dintr-o coloană în alta.", visible: staff() },
+  { href: "/leadership", label: "Întârzieri", icon: TriangleAlert, hint: "Sarcinile întârziate din toate departamentele, pentru conducere.", visible: staff(isCd) },
+  { href: "/meetings", label: "Ședințe", icon: CalendarDays, hint: "Ședințele echipei, cu agenda și notițele lor.", visible: staff() },
+  { href: "/decisions", label: "Decizii", icon: Gavel, hint: "Deciziile luate, ca să nu se piardă în conversații.", visible: staff() },
+  { href: "/documents", label: "Documente", icon: FileText, hint: "Documentele echipei, într-un singur loc.", visible: staff() },
+  { href: "/announcements", label: "Anunțuri", icon: Megaphone, hint: "Anunțurile importante pentru toată organizația.", visible: staff() },
+  { href: "/pn", label: "Program Național", icon: Map, hint: "Programul Național: zone, județe, licee, ambasadori și jurnalul de contact.", visible: staff((u) => u.canAccessPn) },
+  { href: "/admin/invitations", label: "Invitații", icon: UserPlus, hint: "Aici inviți oameni noi. Fără invitație nimeni nu poate intra.", visible: staff(canSeeInvitations) },
+  { href: "/admin/users", label: "Utilizatori", icon: Users, hint: "Lista utilizatorilor: roluri, departamente, cine e activ.", visible: staff(canSeeInvitations) },
 ];
 
 // The ambassadors platform: ambassadors and people with PN access.
-const PLATFORM_NAV: NavItem[] = [
-  { href: "/platform/projects", label: "Proiecte", icon: FolderKanban, visible: (u) => u.canAccessPlatform },
-  { href: "/platform/challenges", label: "Challenge-uri", icon: Trophy, visible: (u) => u.canAccessPlatform },
-  { href: "/platform/open-school", label: "Open School", icon: BookOpen, visible: (u) => u.canAccessPlatform },
-  { href: "/platform/me", label: "Profilul meu", icon: UserRound, visible: (u) => u.canAccessPlatform },
+export const PLATFORM_NAV: NavItem[] = [
+  { href: "/platform/projects", label: "Proiecte", icon: FolderKanban, hint: "Proiectele ambasadorilor. Textul din Setări se salvează doar cu butonul Salvează; pozele și PDF-ul se salvează imediat.", visible: (u) => u.canAccessPlatform },
+  { href: "/platform/challenges", label: "Challenge-uri", icon: Trophy, hint: "Challenge-urile active și notele primite pe criterii.", visible: (u) => u.canAccessPlatform },
+  { href: "/platform/open-school", label: "Open School", icon: BookOpen, hint: "Open School: materialele și activitatea ta.", visible: (u) => u.canAccessPlatform },
+  { href: "/platform/me", label: "Profilul meu", icon: UserRound, hint: "Profilul tău: proiectele, notele și progresul.", visible: (u) => u.canAccessPlatform },
   // Board only: CEO, President, Secretary, every VP, superadmin (is_cd in the database).
-  { href: "/platform/gallery", label: "Galerie", icon: Images, visible: isCd },
+  { href: "/platform/gallery", label: "Galerie", icon: Images, hint: "Galeria cu pozele din toate proiectele.", visible: isCd },
 ];
 
 export function AppSidebar({ user }: { user: SidebarUser }) {
@@ -116,7 +117,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
                     </SidebarMenuButton>
                   ) : (
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="nav-link">
-                      <Link href={item.href} onClick={closeMobile}>
+                      <Link href={item.href} onClick={closeMobile} data-tour={item.href}>
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>
@@ -133,6 +134,9 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
       </SidebarContent>
 
       <SidebarFooter className="px-4 py-4 text-xs text-sidebar-foreground/70">
+        <button type="button" className="mb-2 w-fit underline-offset-2 hover:underline" onClick={() => window.dispatchEvent(new Event("thinkup:tour"))}>
+          Tur ghidat
+        </button>
         <p className="font-medium text-sidebar-foreground">{user.fullName ?? "—"}</p>
         <p>{roleLine(user.role, user.departmentName, user.isSuperadmin)}</p>
       </SidebarFooter>
