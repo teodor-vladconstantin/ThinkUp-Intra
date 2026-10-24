@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { ActionForm, fieldClass } from "@/components/platform/controls";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { createReportForm } from "@/app/(app)/reports/actions";
 import { FIELD_TYPES, type FieldType, type ReportField } from "@/lib/reports";
 
@@ -43,18 +45,14 @@ export function FormBuilder() {
           <li key={f.id} className="space-y-2 rounded-lg border p-3">
             <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
               <Input value={f.label} onChange={(e) => set(i, { label: e.target.value })} placeholder="Întrebarea" aria-label={`Întrebarea ${i + 1}`} maxLength={200} />
-              <select value={f.type} onChange={(e) => set(i, { type: e.target.value as FieldType })} aria-label="Tip câmp" className={fieldClass}>
-                {Object.entries(FIELD_TYPES).map(([k, label]) => (
-                  <option key={k} value={k}>{label}</option>
-                ))}
-              </select>
+              <Select value={f.type} onValueChange={(v) => set(i, { type: v as FieldType })} aria-label="Tip câmp" options={Object.entries(FIELD_TYPES).map(([value, label]) => ({ value, label }))} />
             </div>
             {(f.type === "select" || f.type === "multiselect") && (
               <textarea value={f.options} onChange={(e) => set(i, { options: e.target.value })} rows={3} placeholder="O opțiune pe rând (minim 2)" aria-label="Opțiuni" className={fieldClass} />
             )}
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" checked={f.required} onChange={(e) => set(i, { required: e.target.checked })} /> Obligatoriu
+                <Checkbox checked={f.required} onCheckedChange={(v) => set(i, { required: v })} /> Obligatoriu
               </label>
               <span className="ml-auto flex gap-1">
                 <Button type="button" variant="ghost" size="sm" onClick={() => move(i, -1)} disabled={i === 0}>↑</Button>

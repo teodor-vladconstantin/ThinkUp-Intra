@@ -1,5 +1,8 @@
 import { ActionForm, fieldClass } from "@/components/platform/controls";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { submitReport } from "@/app/(app)/reports/actions";
 import { answerName, type ReportField } from "@/lib/reports";
 
@@ -19,34 +22,21 @@ export function FillForm({ formId, fields }: { formId: string; fields: ReportFie
             {f.type === "text" && <Input name={name} maxLength={300} required={f.required} />}
             {f.type === "textarea" && <textarea name={name} rows={4} maxLength={5000} required={f.required} className={fieldClass} />}
             {f.type === "number" && <Input name={name} type="number" step="any" required={f.required} />}
-            {f.type === "date" && <Input name={name} type="date" required={f.required} />}
+            {f.type === "date" && <DatePicker name={name} required={f.required} aria-label={f.label} />}
             {f.type === "url" && <Input name={name} type="url" placeholder="https://" maxLength={500} required={f.required} />}
-            {f.type === "select" && (
-              <select name={name} required={f.required} defaultValue="" className={fieldClass}>
-                <option value="">Alege…</option>
-                {f.options?.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
-            )}
+            {f.type === "select" && <Select name={name} required={f.required} aria-label={f.label} options={(f.options ?? []).map((o) => ({ value: o, label: o }))} />}
             {f.type === "multiselect" &&
               f.options?.map((o) => (
                 <label key={o} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name={name} value={o} /> {o}
+                  <Checkbox name={name} value={o} /> {o}
                 </label>
               ))}
-            {f.type === "yesno" &&
-              (["yes", "no"] as const).map((v, i) => (
-                <label key={v} className="mr-4 inline-flex items-center gap-2 text-sm">
-                  <input type="radio" name={name} value={v} required={f.required && i === 0} /> {v === "yes" ? "Da" : "Nu"}
-                </label>
-              ))}
-            {f.type === "scale" &&
-              [1, 2, 3, 4, 5].map((n) => (
-                <label key={n} className="mr-4 inline-flex items-center gap-1.5 text-sm">
-                  <input type="radio" name={name} value={n} required={f.required && n === 1} /> {n}
-                </label>
-              ))}
+            {f.type === "yesno" && (
+              <Select name={name} required={f.required} aria-label={f.label} options={[{ value: "yes", label: "Da" }, { value: "no", label: "Nu" }]} />
+            )}
+            {f.type === "scale" && (
+              <Select name={name} required={f.required} aria-label={f.label} options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))} />
+            )}
           </fieldset>
         );
       })}
