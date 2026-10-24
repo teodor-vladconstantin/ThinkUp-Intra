@@ -125,7 +125,7 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('tech_ambassador', 'create challenge', 'denied', pg_temp.try($q$insert into challenges (name, created_by) values ('Y x', 'y_techamb')$q$));
 
 -- =====================================================================
--- PN mentor: challenges, grading, feedback, warnings, Open School, puzzle
+-- PN mentor: challenges, grading, feedback, warnings, Open School
 -- =====================================================================
 select pg_temp.as_user('y_pn');
 insert into rls_results (persona, check_name, expected, actual) values
@@ -150,11 +150,6 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'reads A personal objectives', '1', pg_temp.cnt($q$select 1 from personal_objectives where owner_id = 'y_a'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'upload Open School file', 'ok', pg_temp.try($q$insert into open_school_files (name, storage_path, uploaded_by) values ('Y Curs', 'os/y.pdf', 'y_pn')$q$));
-insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'give puzzle piece to A', 'ok', pg_temp.try($q$insert into puzzle_pieces (profile_id, piece, given_by) values ('y_a', 1, 'y_pn')$q$));
-insert into rls_results (persona, check_name, expected, actual) values
-  ('mentor_pn', 'give puzzle piece to Tech mentor', 'denied', pg_temp.try($q$insert into puzzle_pieces (profile_id, piece, given_by) values ('y_tech', 1, 'y_pn')$q$));
-
 -- Another PN mentor cannot archive someone else's warning; the VP PN can.
 select pg_temp.as_user('y_pn2');
 insert into rls_results (persona, check_name, expected, actual) values
@@ -204,7 +199,6 @@ insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_tech', 'reviews', '0', pg_temp.cnt($q$select 1 from reviews$q$)),
   ('mentor_tech', 'mentor_feedback', '0', pg_temp.cnt($q$select 1 from mentor_feedback$q$)),
   ('mentor_tech', 'open_school_files', '0', pg_temp.cnt($q$select 1 from open_school_files$q$)),
-  ('mentor_tech', 'puzzle_pieces', '0', pg_temp.cnt($q$select 1 from puzzle_pieces$q$)),
   ('mentor_tech', 'platform_people', '0', pg_temp.cnt($q$select 1 from platform_people$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_tech', 'create project', 'denied', pg_temp.try($q$insert into projects (name, created_by) values ('Y Tech', 'y_tech')$q$));

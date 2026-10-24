@@ -15,7 +15,6 @@ import {
   archiveWarning,
   deleteObjective,
   giveBonus,
-  givePuzzlePiece,
   issueWarning,
   saveProfile,
   setAvatar,
@@ -35,7 +34,7 @@ type Warning = { id: string; body: string; issued_by: string; archived: boolean;
 type Objective = { id: string; name: string; description: string | null; progress: number; deadline: string | null };
 
 // One person on the platform. Self: edit profile, avatar, objectives. PN mentors: warnings,
-// puzzle pieces, and the private parts (grades, objectives). RLS returns those parts only to
+// and the private parts (grades, objectives). RLS returns those parts only to
 // the person themself and to PN, so for anyone else the queries simply come back empty.
 export async function PersonView({ me, personId }: { me: Profile; personId: string }) {
   const db = createUserClient();
@@ -46,9 +45,8 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
   const self = personId === me.clerkId;
   const mentor = isPlatformMentor(me);
 
-  const [profile, pieces, projects, grades, warnings, objectives, challenges, bonuses] = await Promise.all([
+  const [profile, projects, grades, warnings, objectives, challenges, bonuses] = await Promise.all([
     db.from("platform_profiles").select("bio, social, avatar_path").eq("profile_id", personId).maybeSingle(),
-    db.from("puzzle_pieces").select("piece").eq("profile_id", personId).order("piece"),
     db.from("project_members").select("project:projects(id, name, archived)").eq("profile_id", personId),
     db.from("submissions").select("score, innovation, impact, feedback_score, efficiency, feedback, graded_at, challenge:challenges(name, deadline, created_at)").eq("student_id", personId).order("graded_at", { ascending: false }),
     db.from("warnings").select("id, body, issued_by, archived, created_at").eq("student_id", personId).order("created_at", { ascending: false }),
@@ -118,31 +116,6 @@ export async function PersonView({ me, personId }: { me: Profile; personId: stri
                   </li>
                 ))}
               </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Puzzle</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {(pieces.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nicio piesă încă.</p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {(pieces.data ?? []).map((p) => (
-                  <li key={p.piece}>
-                    <Badge variant="secondary">🧩 {p.piece}</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {mentor && !self && (
-              <ActionForm action={givePuzzlePiece} submitLabel="Acordă piesa" className="sm:grid-cols-[1fr_auto]">
-                <input type="hidden" name="profileId" value={personId} />
-                <Input name="piece" type="number" min={1} required placeholder="Nr. piesă" aria-label="Număr piesă" />
-              </ActionForm>
             )}
           </CardContent>
         </Card>

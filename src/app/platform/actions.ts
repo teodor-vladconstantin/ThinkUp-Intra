@@ -356,7 +356,7 @@ export async function setAvatar(file: z.infer<typeof fileMeta>): Promise<FormSta
   return done("Poză actualizată.");
 }
 
-// ---------- mentoring: warnings, puzzle ----------
+// ---------- mentoring: warnings ----------
 
 export async function issueWarning(_prev: FormState, formData: FormData): Promise<FormState> {
   const me = await actor();
@@ -375,17 +375,6 @@ export async function archiveWarning(warningId: string): Promise<FormState> {
   return data?.length ? done("Arhivat.") : fail("Doar cine l-a dat (sau VP PN) îl poate arhiva.");
 }
 
-export async function givePuzzlePiece(_prev: FormState, formData: FormData): Promise<FormState> {
-  const me = await actor();
-  const parsed = z
-    .object({ profileId: z.string().min(1).max(100), piece: z.coerce.number().int().min(1, "Piesă invalidă").max(1000) })
-    .safeParse(Object.fromEntries(formData));
-  if (!me || !isPlatformMentor(me)) return fail("Doar mentorii PN dau piese.");
-  if (!parsed.success) return fail(parsed.error.issues[0].message);
-  const { error } = await createUserClient().from("puzzle_pieces").insert({ profile_id: parsed.data.profileId, piece: parsed.data.piece, given_by: me.clerkId });
-  if (error) return fail(error.code === "23505" ? "Are deja piesa asta." : "Piesa nu a putut fi dată.");
-  return done("Piesă acordată.");
-}
 
 // ---------- Open School ----------
 

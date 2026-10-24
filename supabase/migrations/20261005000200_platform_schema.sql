@@ -3,7 +3,7 @@
 --
 -- Gates (from 20261005000100_platform_access.sql):
 --   read anything on the platform  -> can_access_platform()   (ambassadors + PN tangent)
---   mentoring (grade, warn, feedback, challenges, Open School, puzzle) -> is_pn_dept()
+--   mentoring (grade, warn, feedback, challenges, Open School) -> is_pn_dept()
 --   edit a project and its content -> is_project_member(project_id)
 -- Tech/MK staff who are not ambassadors pass none of these: 0 rows everywhere.
 --
