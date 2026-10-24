@@ -169,3 +169,13 @@ export function canManageUser(a: Actor & MaybeDept & { clerkId: string }, t: Man
 export function canRevokeInvitation(a: Actor & { clerkId: string }, invitedBy: string) {
   return a.isSuperadmin || a.role === "ceo" || a.role === "president" || invitedBy === a.clerkId;
 }
+
+// ---------- reports ----------
+
+// Mirrors rf_insert / rf_update / rr_read: the CD builds forms and reads every answer.
+export const canManageReports = isCd;
+
+// Mirrors rr_insert: mentors fill the forms.
+export function canFillReports(a: Actor) {
+  return a.role === "mentor";
+}

@@ -13,6 +13,7 @@ import {
   TriangleAlert,
   LayoutDashboard,
   ListChecks,
+  ClipboardList,
   Map,
   Megaphone,
   Trophy,
@@ -35,7 +36,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { canSeeInvitations, isCd, isStaff, ROLE_LABELS, type Actor, type AppRole } from "@/lib/permissions";
+import { canFillReports, canManageReports, canSeeInvitations, isCd, isStaff, ROLE_LABELS, type Actor, type AppRole } from "@/lib/permissions";
 
 // Only plain data crosses the server -> client boundary (no functions, no secrets).
 export type SidebarUser = Actor & {
@@ -67,6 +68,7 @@ export const NAV: NavItem[] = [
   { href: "/decisions", label: "Decizii", icon: Gavel, hint: "Deciziile luate, ca să nu se piardă în conversații.", visible: staff() },
   { href: "/documents", label: "Documente", icon: FileText, hint: "Documentele echipei, într-un singur loc.", visible: staff() },
   { href: "/announcements", label: "Anunțuri", icon: Megaphone, hint: "Anunțurile importante pentru toată organizația.", visible: staff() },
+  { href: "/reports", label: "Rapoarte", icon: ClipboardList, hint: "Rapoartele mentorilor: mentorii completează formularele, consiliul director le construiește și vede răspunsurile.", visible: staff((u) => canManageReports(u) || canFillReports(u)) },
   { href: "/pn", label: "Program Național", icon: Map, hint: "Programul Național: zone, județe, licee, ambasadori și jurnalul de contact.", visible: staff((u) => u.canAccessPn) },
   { href: "/admin/invitations", label: "Invitații", icon: UserPlus, hint: "Aici inviți oameni noi. Fără invitație nimeni nu poate intra.", visible: staff(canSeeInvitations) },
   { href: "/admin/users", label: "Utilizatori", icon: Users, hint: "Lista utilizatorilor: roluri, departamente, cine e activ.", visible: staff(canSeeInvitations) },
