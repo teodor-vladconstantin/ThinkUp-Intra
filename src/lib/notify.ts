@@ -30,10 +30,36 @@ const fmtDate = (iso: string) =>
 
 type TaskMail = { id: string; title: string; deadline: string | null };
 
-function taskEmail(intro: string, task: TaskMail) {
+// Brand colours from globals.css (primary purple, warning amber, destructive red). Inline styles
+// and tables only: mail clients ignore <style> blocks and modern layout.
+const TONES = {
+  assigned: { color: "#7c3aed", label: "Sarcină nouă" },
+  due_soon: { color: "#f59e0b", label: "Termen apropiat" },
+  overdue: { color: "#ef4444", label: "Întârziată" },
+} as const;
+
+function taskEmail(tone: keyof typeof TONES, intro: string, task: TaskMail) {
+  const { color, label } = TONES[tone];
   const link = `${process.env.NEXT_PUBLIC_APP_URL}/tasks/${task.id}`;
-  const deadline = task.deadline ? `<p>Termen: <b>${fmtDate(task.deadline)}</b></p>` : "";
-  return `<p>${intro}</p><p><b>${esc(task.title)}</b></p>${deadline}<p><a href="${link}">Deschide sarcina</a></p>`;
+  const font = "Inter,Segoe UI,Helvetica,Arial,sans-serif";
+  const deadline = task.deadline
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#6b7280">Termen: <b style="color:#0f172a">${fmtDate(task.deadline)}</b></p>`
+    : "";
+  return `<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px 12px;background:#f8fafc;font-family:${font}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
+<tr><td style="background:#1a0b2e;padding:20px 28px;font-family:Georgia,'Playfair Display',serif;font-size:22px;color:#ffffff">ThinkUp <span style="color:#a78bfa">Intranet</span></td></tr>
+<tr><td style="height:4px;background:${color};font-size:0;line-height:0">&nbsp;</td></tr>
+<tr><td style="padding:28px">
+<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${color}">${label}</p>
+<h1 style="margin:0 0 12px;font-family:Georgia,'Playfair Display',serif;font-size:24px;line-height:1.3;color:#0f172a">${esc(task.title)}</h1>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.5;color:#334155">${intro}</p>
+${deadline}
+<a href="${link}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:8px">Deschide sarcina</a>
+</td></tr>
+<tr><td style="padding:16px 28px;background:#faf5ff;font-size:12px;color:#6b7280">ThinkUp Academy · mesaj automat din intranet</td></tr>
+</table></td></tr></table></body></html>`;
 }
 
 // Immediate email when someone is assigned a task (PRD 5.3). Recipient is looked up with the
@@ -46,7 +72,7 @@ export async function notifyAssigned(task: TaskMail, assigneeId: string) {
     .eq("is_active", true)
     .maybeSingle();
   if (!p) return;
-  await sendEmail(p.email, `Sarcină nouă: ${task.title}`, taskEmail("Ți-a fost atribuită o sarcină nouă.", task));
+  await sendEmail(p.email, `Sarcină nouă: ${task.title}`, taskEmail("assigned", "Ți-a fost atribuită o sarcină nouă.", task));
 }
 
 // Daily job: one email per task entering the 48h window and one when it becomes overdue.
@@ -74,7 +100,7 @@ export async function sendDueReminders() {
     const { data: p } = await db.from("profiles").select("email").eq("clerk_id", t.assignee_id).eq("is_active", true).maybeSingle();
     const intro = kind === "overdue" ? "Această sarcină a depășit termenul." : "Această sarcină are termen în următoarele 48 de ore.";
     const subject = `${kind === "overdue" ? "Întârziată" : "Termen apropiat"}: ${t.title}`;
-    const ok = p ? await sendEmail(p.email, subject, taskEmail(intro, t), `${t.id}-${kind}`) : false;
+    const ok = p ? await sendEmail(p.email, subject, taskEmail(kind, intro, t), `${t.id}-${kind}`) : false;
     if (ok) {
       sent++;
       await db.from("task_notifications").update({ sent_at: new Date().toISOString() }).match({ task_id: t.id, kind });
