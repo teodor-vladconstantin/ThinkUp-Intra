@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireProfile, type Profile } from "@/lib/auth";
 import { deadlineFromDate } from "@/lib/dates";
+import { notifyAssigned } from "@/lib/notify";
 import { canCreateTaskIn, canEditTask, canMoveTask } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
 import { STATUSES } from "@/lib/tasks";
@@ -115,6 +117,11 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
     .single();
   if (error) return { ok: false, message: "Sarcina nu a putut fi salvată." };
 
+  const assignee = f.assigneeId;
+  if (assignee && assignee !== actor.clerkId) {
+    after(() => notifyAssigned({ id: data.id, title: f.title, deadline: f.deadline ? deadlineFromDate(f.deadline) : null }, assignee));
+  }
+
   refreshAll();
   redirect(`/tasks/${data.id}`);
 }
@@ -166,6 +173,11 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
     .eq("id", id.data)
     .select("id");
   if (error || !updated?.length) return { ok: false, message: "Modificarea nu a putut fi salvată." };
+
+  const assignee = f.assigneeId;
+  if (assignee && assignee !== current.assignee_id && assignee !== actor.clerkId) {
+    after(() => notifyAssigned({ id: id.data, title: f.title, deadline: f.deadline ? deadlineFromDate(f.deadline) : null }, assignee));
+  }
 
   refreshAll();
   return { ok: true, message: "Salvat." };
