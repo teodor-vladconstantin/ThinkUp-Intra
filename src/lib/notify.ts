@@ -40,7 +40,8 @@ const TONES = {
 
 function taskEmail(tone: keyof typeof TONES, intro: string, task: TaskMail) {
   const { color, label } = TONES[tone];
-  const link = `${process.env.NEXT_PUBLIC_APP_URL}/tasks/${task.id}`;
+  const origin = process.env.NEXT_PUBLIC_APP_URL;
+  const link = `${origin}/tasks/${task.id}`;
   const font = "Inter,Segoe UI,Helvetica,Arial,sans-serif";
   const deadline = task.deadline
     ? `<p style="margin:0 0 24px;font-size:14px;color:#6b7280">Termen: <b style="color:#0f172a">${fmtDate(task.deadline)}</b></p>`
@@ -49,7 +50,10 @@ function taskEmail(tone: keyof typeof TONES, intro: string, task: TaskMail) {
 <body style="margin:0;padding:24px 12px;background:#f8fafc;font-family:${font}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
-<tr><td style="background:#1a0b2e;padding:20px 28px;font-family:Georgia,'Playfair Display',serif;font-size:22px;color:#ffffff">ThinkUp <span style="color:#a78bfa">Intranet</span></td></tr>
+<tr><td style="background:#1a0b2e;padding:14px 28px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td><img src="${origin}/logos/logo-dark.png" width="76" height="39" alt="ThinkUp" style="display:block;border:0"></td>
+<td style="padding-left:12px;font-family:Georgia,'Playfair Display',serif;font-size:20px;color:#a78bfa">Intranet</td>
+</tr></table></td></tr>
 <tr><td style="height:4px;background:${color};font-size:0;line-height:0">&nbsp;</td></tr>
 <tr><td style="padding:28px">
 <p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${color}">${label}</p>
