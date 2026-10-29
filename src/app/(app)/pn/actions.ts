@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
+import { normalizeImportKey, parseAmbassadorCsv } from "@/lib/ambassador-csv";
 import { sendInvitation } from "@/lib/invitations";
 import { canManageZones, isPnMember } from "@/lib/permissions";
 import { SCHOOL_STATUSES } from "@/lib/pn";
@@ -164,6 +165,77 @@ export async function addAmbassador(_prev: FormState, formData: FormData): Promi
 
   revalidatePath("/pn", "layout");
   return { ok: true, message: "Ambasador adăugat." };
+}
+
+export async function importAmbassadorsCsv(_prev: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requireProfile();
+  if (!actor || !isPnMember(actor)) return { ok: false, message: "Doar departamentul PN importă ambasadori." };
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Alege un fișier CSV." };
+  if (file.size > 500_000) return { ok: false, message: "Fișierul CSV depășește limita de 500 KB." };
+  if (!file.name.toLowerCase().endsWith(".csv")) return { ok: false, message: "Fișierul trebuie să aibă extensia .csv." };
+
+  let rows: ReturnType<typeof parseAmbassadorCsv>;
+  try {
+    rows = parseAmbassadorCsv(await file.text());
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Fișierul CSV nu este valid." };
+  }
+
+  const emailSchema = z.email().max(200);
+  const phoneSchema = z.string().regex(/^[+()\d\s.-]{6,40}$/);
+  for (const row of rows) {
+    if (!row.fullName || row.fullName.length > 150) return { ok: false, message: `Numele de la rândul ${row.rowNumber} este invalid.` };
+    if (!row.schoolName || row.schoolName.length > 200) return { ok: false, message: `Liceul de la rândul ${row.rowNumber} este invalid.` };
+    if (row.email && !emailSchema.safeParse(row.email).success) return { ok: false, message: `Emailul de la rândul ${row.rowNumber} este invalid.` };
+    if (row.phone && !phoneSchema.safeParse(row.phone).success) return { ok: false, message: `Telefonul de la rândul ${row.rowNumber} este invalid.` };
+  }
+
+  const db = createUserClient();
+  const [schoolResult, ambassadorResult] = await Promise.all([
+    db.from("schools").select("id, name").limit(10000),
+    db.from("ambassadors").select("id, full_name, school_id").limit(10000),
+  ]);
+  if (schoolResult.error || ambassadorResult.error) return { ok: false, message: "Datele existente nu au putut fi verificate." };
+
+  const schoolMatches = new Map<string, number[]>();
+  for (const school of schoolResult.data ?? []) {
+    const key = normalizeImportKey(school.name);
+    schoolMatches.set(key, [...(schoolMatches.get(key) ?? []), school.id]);
+  }
+
+  const knownAmbassadors = new Set((ambassadorResult.data ?? []).map((row) => `${row.school_id}:${normalizeImportKey(row.full_name)}`));
+  const incoming = new Set<string>();
+  const importRows: { full_name: string; school_id: number; email: string | null; phone: string | null }[] = [];
+  for (const row of rows) {
+    const matches = schoolMatches.get(normalizeImportKey(row.schoolName)) ?? [];
+    if (matches.length !== 1) {
+      return {
+        ok: false,
+        message: matches.length === 0
+          ? `Liceul de la rândul ${row.rowNumber} nu există. Creează liceul înainte de import.`
+          : `Numele liceului de la rândul ${row.rowNumber} este ambiguu. Folosește un nume unic.`,
+      };
+    }
+    const key = `${matches[0]}:${normalizeImportKey(row.fullName)}`;
+    if (incoming.has(key) || knownAmbassadors.has(key)) {
+      return { ok: false, message: `Ambasador duplicat la rândul ${row.rowNumber} (același nume și liceu).` };
+    }
+    incoming.add(key);
+    importRows.push({
+      full_name: row.fullName,
+      school_id: matches[0],
+      email: row.email || null,
+      phone: row.phone || null,
+    });
+  }
+
+  const { data: imported, error } = await db.rpc("import_ambassadors", { p_rows: importRows });
+  if (error || imported !== importRows.length) return { ok: false, message: "Importul atomic nu a reușit. Nu s-au importat rânduri." };
+
+  revalidatePath("/pn", "layout");
+  return { ok: true, message: `Import finalizat: ${imported} ambasadori adăugați.` };
 }
 
 export async function setAmbassadorActive(formData: FormData) {
