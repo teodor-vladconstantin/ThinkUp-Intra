@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { isPnMember } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
+import { AmbassadorCsvImport } from "@/components/pn/ambassador-csv-import";
 
 type Row = {
   id: number;
@@ -13,7 +14,6 @@ type Row = {
 type Contact = { ambassador_id: number; email: string | null; phone: string | null };
 
 // Everyone with PN access sees the list; only the PN department sees contacts (RLS ambc_all).
-// New ambassadors are added from the school page (the CSV import comes later).
 export default async function AmbassadorsPage(props: PageProps<"/pn/ambassadors">) {
   const profile = await requireProfile();
   if (!profile) redirect("/sign-in");
@@ -37,6 +37,8 @@ export default async function AmbassadorsPage(props: PageProps<"/pn/ambassadors"
           {showInactive ? "Doar activi" : "Arată și inactivii"}
         </Link>
       </div>
+
+      {pn && <AmbassadorCsvImport />}
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Niciun ambasador. Se adaugă din pagina liceului.</p>

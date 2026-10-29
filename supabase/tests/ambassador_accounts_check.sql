@@ -42,6 +42,22 @@ select pg_temp.as_user('w_pn');
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'add ambassador (new signature)', 'ok', pg_temp.try($q$select add_ambassador('W Nou', (select id from schools where name = 'W Liceu'), null, null)$q$));
 insert into rls_results (persona, check_name, expected, actual) values
+  ('mentor_pn', 'import ambassador and contact atomically', '1', pg_temp.val($q$
+    select import_ambassadors(jsonb_build_array(jsonb_build_object(
+      'full_name', 'W CSV Elev',
+      'school_id', (select id from schools where name = 'W Liceu'),
+      'email', 'w.csv@think-up.academy',
+      'phone', '+40123456789'
+    )))::text
+  $q$));
+insert into rls_results (persona, check_name, expected, actual) values
+  ('mentor_pn', 'reject duplicate CSV ambassador', 'denied', pg_temp.try($q$
+    select import_ambassadors(jsonb_build_array(jsonb_build_object(
+      'full_name', 'W CSV Elev',
+      'school_id', (select id from schools where name = 'W Liceu')
+    )))
+  $q$));
+insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'invite ambassador', 'ok', pg_temp.try($q$insert into invitations (email, role, invited_by, ambassador_id) select 'w.elev@think-up.academy', 'student', 'w_pn', id from ambassadors where full_name = 'W Elev'$q$));
 insert into rls_results (persona, check_name, expected, actual) values
   ('mentor_pn', 'second pending invite, same ambassador', 'denied', pg_temp.try($q$insert into invitations (email, role, invited_by, ambassador_id) select 'w.elev2@think-up.academy', 'student', 'w_pn', id from ambassadors where full_name = 'W Elev'$q$));

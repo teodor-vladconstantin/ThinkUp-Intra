@@ -96,6 +96,7 @@ Computed at read time through the `tasks_with_alert` view (`overdue`, `due_soon`
 - A scheduled job (Vercel Cron, route handler protected by a secret) runs daily: sends one email for tasks entering the 48-hour window and one for tasks that became overdue.
 - Add table `task_notifications (task_id, kind, sent_at)` with a unique constraint on `(task_id, kind)` so no reminder is sent twice. This is an extra migration beyond `intranet_schema.sql`.
 - Emails: Romanian, short, with a link to the task.
+- Configure `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `NEXT_PUBLIC_APP_URL`, and `CRON_SECRET`; the daily Vercel job runs at 06:00 UTC.
 
 ### 5.4 Meetings, minutes, decisions
 - Weekly CD meeting and weekly department meetings. A meeting has title, date, minutes (rich text or markdown), kind (`cd` or `department`).
@@ -129,6 +130,7 @@ Computed at read time through the `tasks_with_alert` view (`overdue`, `due_soon`
 ### 6.3 Ambassadors
 - Name, school, link to the ambassadors platform (`platform_user_id`), active flag. Email and phone live in `ambassador_contacts` and follow stricter access.
 - Data source: the existing ambassadors platform. v1 uses a one-time CSV import. Live sync is a later decision.
+- The current import accepts `full_name,school_name,email,phone`; school names must match one existing school (case-insensitive). It rejects duplicate names within a school and imports at most 500 rows atomically. The legacy `platform_user_id` column was removed when the old platform integration was retired; restore an identifier mapping only after confirming the source CSV and identifier semantics.
 - Ambassadors are likely minors. Store only what is needed.
 
 ## 7. Data model
