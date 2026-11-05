@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { AlertBadge, AlertBanner } from "@/components/tasks/alert-badge";
 import { TaskCard } from "@/components/tasks/task-card";
@@ -7,6 +8,7 @@ import { requireProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import { isCd } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
+import { DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { assigneeName, STATUS_LABELS, STATUSES } from "@/lib/tasks";
 import { listTasks } from "@/lib/tasks-server";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
   const profile = await requireProfile();
   if (!profile) redirect("/sign-in");
   const sp = await props.searchParams;
+  const page = parsePage(sp.page);
 
   const db = createUserClient();
   const { data: departments } = await db.from("departments").select("id, name").order("id");
@@ -28,9 +31,27 @@ export default async function BoardPage(props: PageProps<"/board">) {
   if (!dept) return <p className="text-sm text-muted-foreground">Nu faci parte dintr-un departament.</p>;
 
   const view = sp.view === "list" ? "list" : "kanban";
-  const tasks = await listTasks(db, (q) => q.or(`department_id.eq.${dept.id},requesting_department_id.eq.${dept.id}`));
+  const departmentFilter = `department_id.eq.${dept.id},requesting_department_id.eq.${dept.id}`;
+  const [taskPage, overdue, dueSoon] = await Promise.all([
+    listTasks(db, (q) => q.or(departmentFilter), page),
+    db
+      .from("tasks_with_alert")
+      .select("id", { count: "exact", head: true })
+      .eq("archived", false)
+      .eq("alert", "overdue")
+      .or(departmentFilter),
+    db
+      .from("tasks_with_alert")
+      .select("id", { count: "exact", head: true })
+      .eq("archived", false)
+      .eq("alert", "due_soon")
+      .or(departmentFilter),
+  ]);
+  if (overdue.error || dueSoon.error) throw new Error("Could not load task alert counts");
+  const { tasks, total } = taskPage;
   const href = (params: { dept?: number; view?: string }) =>
     `/board?dept=${params.dept ?? dept.id}${(params.view ?? view) === "list" ? "&view=list" : ""}`;
+  const pageParams = { dept: String(dept.id), ...(view === "list" ? { view } : {}) };
 
   return (
     <div className="space-y-6">
@@ -51,10 +72,12 @@ export default async function BoardPage(props: PageProps<"/board">) {
         <Pill href={href({ view: "list" })} active={view === "list"}>Listă</Pill>
       </div>
 
+      <Pagination basePath="/board" page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} params={pageParams} label="sarcini" />
+
       {/* PRD 5.2: the VP sees the department's alerts on the department board */}
       <AlertBanner
-        overdue={tasks.filter((t) => t.alert === "overdue").length}
-        dueSoon={tasks.filter((t) => t.alert === "due_soon").length}
+        overdue={overdue.count ?? 0}
+        dueSoon={dueSoon.count ?? 0}
       />
 
       {view === "kanban" ? (
@@ -113,6 +136,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
           {tasks.length === 0 && <p className="p-4 text-sm text-muted-foreground">Nicio sarcină.</p>}
         </div>
       )}
+      <Pagination basePath="/board" page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} params={pageParams} label="sarcini" />
     </div>
   );
 }

@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { moveCounty } from "@/app/(app)/pn/actions";
 import { Select } from "@/components/ui/select";
-import { formatDate } from "@/lib/dates";
-import { NO_ZONE_COLOR, SCHOOL_STATUS_LABELS, type County, type SchoolSummary, type Zone, type ZoneMove } from "@/lib/pn";
+import { NO_ZONE_COLOR, SCHOOL_STATUS_LABELS, type County, type SchoolSummary, type Zone } from "@/lib/pn";
 
 // Leaflet touches `window`, so it can only load in the browser.
 const LeafletMap = dynamic(() => import("./leaflet-map"), {
@@ -19,14 +18,12 @@ export function CountyMap({
   zones,
   schools,
   ambassadorsByCounty,
-  history,
   canManage,
 }: {
   counties: County[];
   zones: Zone[];
   schools: SchoolSummary[];
   ambassadorsByCounty: Record<string, number>;
-  history: ZoneMove[];
   canManage: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -40,8 +37,6 @@ export function CountyMap({
   const county = counties.find((c) => c.code === selected) ?? null;
   const zone = county?.zone_id ? zoneById.get(county.zone_id) : undefined;
   const countySchools = schools.filter((s) => s.county_code === selected);
-  const countyHistory = history.filter((h) => h.county_code === selected);
-  const zoneName = (id: number | null) => (id ? (zoneById.get(id)?.name ?? "—") : "fără zonă");
 
   function onMove(value: string) {
     if (!county) return;
@@ -80,6 +75,9 @@ export function CountyMap({
           onValueChange={(v) => setSelected(v || null)}
           options={[...counties].sort((a, b) => a.name.localeCompare(b.name, "ro")).map((c) => ({ value: c.code, label: c.name }))}
         />
+        <Link href="/pn/history" className="block text-sm text-primary hover:underline">
+          Istoric complet al zonelor
+        </Link>
 
         {!county ? (
           <p className="text-sm text-muted-foreground">Apasă pe un județ de pe hartă.</p>
@@ -124,18 +122,6 @@ export function CountyMap({
               )}
             </div>
 
-            {countyHistory.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Istoric zone</h3>
-                <ol className="space-y-1 text-xs text-muted-foreground">
-                  {countyHistory.map((h) => (
-                    <li key={h.id}>
-                      {formatDate(h.changed_at)}: {zoneName(h.from_zone)} → {zoneName(h.to_zone)} ({h.changer?.full_name ?? "—"})
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
           </>
         )}
       </aside>

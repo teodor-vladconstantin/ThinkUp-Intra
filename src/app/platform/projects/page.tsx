@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { SectionLabel } from "@/components/section-label";
+import { Pagination } from "@/components/pagination";
 import { ActionForm, fieldClass } from "@/components/platform/controls";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
+import { DEFAULT_PAGE_SIZE, pageRange, parsePage } from "@/lib/pagination";
 import { createUserClient } from "@/lib/supabase/server";
 import { createProject } from "../actions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,20 +28,31 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
   const sp = await props.searchParams;
   const mine = sp.mine === "1";
   const archived = sp.archived === "1";
+  const page = parsePage(sp.page);
+  const range = pageRange(page, DEFAULT_PAGE_SIZE);
 
   const db = createUserClient();
-  const [{ data }, challenges, people] = await Promise.all([
-    db
-      .from("projects")
-      .select("id, name, description, thumbnail_path, archived, challenge:challenges(name), members:project_members(profile_id)")
-      .eq("archived", archived)
-      .order("created_at", { ascending: false })
-      .limit(200),
+  const projectsQuery = mine
+    ? db
+        .from("projects")
+        .select("id, name, description, thumbnail_path, archived, challenge:challenges(name), members:project_members!inner(profile_id)", { count: "exact" })
+        .eq("archived", archived)
+        .eq("members.profile_id", me.clerkId)
+        .order("created_at", { ascending: false })
+        .range(range.from, range.to)
+    : db
+        .from("projects")
+        .select("id, name, description, thumbnail_path, archived, challenge:challenges(name), members:project_members(profile_id)", { count: "exact" })
+        .eq("archived", archived)
+        .order("created_at", { ascending: false })
+        .range(range.from, range.to);
+  const [{ data, count, error: projectError }, challenges, people] = await Promise.all([
+    projectsQuery,
     db.from("challenges").select("id, name").eq("archived", false).order("created_at", { ascending: false }),
     platformPeople(db),
   ]);
-  let projects = (data ?? []) as unknown as Row[];
-  if (mine) projects = projects.filter((p) => p.members.some((m) => m.profile_id === me.clerkId));
+  if (projectError) throw new Error("Could not load projects");
+  const projects = (data ?? []) as unknown as Row[];
   const thumbs = await signedUrls(db, "project-files", projects.map((p) => p.thumbnail_path ?? ""));
 
   const tab = (label: string, href: string, active: boolean) => (
@@ -86,6 +99,15 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
         </CardContent>
       </Card>
 
+      <Pagination
+        basePath="/platform/projects"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(mine ? { mine: "1" } : {}), ...(archived ? { archived: "1" } : {}) }}
+        label="proiecte"
+      />
+
       {projects.length === 0 ? (
         <p className="text-sm text-muted-foreground">Niciun proiect aici încă.</p>
       ) : (
@@ -115,6 +137,14 @@ export default async function ProjectsPage(props: PageProps<"/platform/projects"
           })}
         </ul>
       )}
+      <Pagination
+        basePath="/platform/projects"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(mine ? { mine: "1" } : {}), ...(archived ? { archived: "1" } : {}) }}
+        label="proiecte"
+      />
     </div>
   );
 }
