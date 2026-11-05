@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
@@ -89,9 +90,13 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
-        {/* TODO(logo): replace with the light logo from public/logos/ once it is copied in */}
-        <Link href={isStaff(user) ? "/dashboard" : "/platform"} className="text-lg font-semibold tracking-tight" onClick={closeMobile}>
-          ThinkUp <span className="text-sidebar-primary">Intranet</span>
+        <Link
+          href={isStaff(user) ? "/dashboard" : "/platform"}
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+          onClick={closeMobile}
+        >
+          <Image src="/logos/thinkup-light.png" alt="ThinkUp" width={180} height={65} priority className="h-10 w-auto" />
+          <span className="text-sidebar-primary">Intranet</span>
         </Link>
       </SidebarHeader>
 
