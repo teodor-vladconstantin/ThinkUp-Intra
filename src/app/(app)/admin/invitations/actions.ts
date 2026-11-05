@@ -52,15 +52,24 @@ export async function createInvitation(_prev: InviteState, formData: FormData): 
 
 // Revoke a pending invitation. Database first (revoke_invitation() checks who may and
 // only flips status), then Clerk, so the link in the email stops working too.
-export async function revokeInvitation(formData: FormData) {
+export async function revokeInvitation(_prev: InviteState, formData: FormData): Promise<InviteState> {
   const actor = await requireProfile();
+  if (!actor) return { ok: false, message: "Nu ești autentificat." };
+
   const id = z.uuid().safeParse(formData.get("id"));
-  if (!actor || !id.success) return;
+  if (!id.success) return { ok: false, message: "Invitație invalidă." };
 
   const db = createUserClient();
-  const { data: invitation } = await db.from("invitations").select("email").eq("id", id.data).maybeSingle();
+  const { data: invitation, error: lookupError } = await db
+    .from("invitations")
+    .select("email")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (lookupError) return { ok: false, message: "Invitația nu a putut fi găsită." };
+  if (!invitation) return { ok: false, message: "Invitația nu există sau nu ai permisiunea." };
+
   const { error } = await db.rpc("revoke_invitation", { p_id: id.data });
-  if (error || !invitation) return;
+  if (error) return { ok: false, message: "Invitația nu a putut fi revocată sau nu ai permisiunea." };
 
   try {
     const clerk = await clerkClient();
@@ -68,8 +77,10 @@ export async function revokeInvitation(formData: FormData) {
     for (const inv of data.filter((i) => i.emailAddress.toLowerCase() === invitation.email)) {
       await clerk.invitations.revokeInvitation(inv.id);
     }
-  } catch {
-    // Already safe without Clerk: profile creation needs a *pending* row in our table.
+  } catch (error) {
+    // The local pending row is already revoked, so an outstanding Clerk link cannot create a profile.
+    console.error("Failed to revoke the Clerk invitation after revoking its local record.", error);
   }
   revalidatePath("/admin/invitations");
+  return { ok: true, message: "Invitație revocată." };
 }

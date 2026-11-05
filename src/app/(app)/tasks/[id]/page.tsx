@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { FormActionButton } from "@/components/form-action-button";
 import { SectionLabel } from "@/components/section-label";
 import { AlertBadge } from "@/components/tasks/alert-badge";
 import { CommentForm } from "@/components/tasks/comment-form";
 import { StatusSelect } from "@/components/tasks/status-select";
 import { TaskForm } from "@/components/tasks/task-form";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
 import { dateInputValue, formatDate, formatDateTime } from "@/lib/dates";
@@ -147,10 +147,9 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
                     zoneId: task.zone_id,
                   }}
                 />
-                <form action={archiveTask} className="border-t pt-4">
-                  <input type="hidden" name="id" value={task.id} />
-                  <Button type="submit" variant="outline">Arhivează sarcina</Button>
-                </form>
+                <div className="border-t pt-4">
+                  <FormActionButton action={archiveTask} id={task.id} label="Arhivează sarcina" variant="outline" />
+                </div>
               </CardContent>
             </Card>
           )}
