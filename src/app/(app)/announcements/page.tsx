@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AnnouncementForm } from "@/components/announcements/announcement-form";
+import { FormActionButton } from "@/components/form-action-button";
 import { SectionLabel } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { activeAnnouncements } from "@/lib/announcements";
 import { requireProfile } from "@/lib/auth";
@@ -46,10 +46,7 @@ export default async function AnnouncementsPage() {
                   {a.title}
                 </p>
                 {canManageOwn(profile, a.author_id) && (
-                  <form action={archiveAnnouncement}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <Button type="submit" variant="ghost" size="sm">Arhivează</Button>
-                  </form>
+                  <FormActionButton action={archiveAnnouncement} id={a.id} label="Arhivează" />
                 )}
               </div>
               {a.body && <p className="mt-2 text-sm whitespace-pre-wrap">{a.body}</p>}

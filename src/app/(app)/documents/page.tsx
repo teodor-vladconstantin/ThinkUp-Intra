@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { DocumentForm } from "@/components/documents/document-form";
+import { FormActionButton } from "@/components/form-action-button";
 import { SectionLabel } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
 import { VISIBILITY_LABELS, type Visibility } from "@/lib/documents";
@@ -70,10 +70,7 @@ export default async function DocumentsPage() {
                 {d.department ? ` · ${d.department.name}` : ""} · {d.creator?.full_name ?? "—"}
               </span>
               {canManageOwn(profile, d.created_by) && (
-                <form action={archiveDocument}>
-                  <input type="hidden" name="id" value={d.id} />
-                  <Button type="submit" variant="ghost" size="sm">Arhivează</Button>
-                </form>
+                <FormActionButton action={archiveDocument} id={d.id} label="Arhivează" />
               )}
             </li>
           ))}
