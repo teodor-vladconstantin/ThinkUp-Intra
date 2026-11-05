@@ -27,3 +27,9 @@ supabase/seed_superadmin.sql   one-time manual bootstrap of the first superadmin
 Migrations live in `supabase/migrations/`. The first one (`*_intranet_schema.sql`) is the source of truth
 for tables, RLS helper functions, policies and the county seed. Apply them in order
 (Supabase SQL Editor or `supabase db push`), then run `supabase/seed_superadmin.sql` once by hand.
+
+## Stare si drepturi
+
+- Cod sursa al intranetului intern ThinkUp Academy, dezvoltat de Teodor-Vlad Constantin. Nu are licenta: toate drepturile sunt rezervate pana la clarificarea acordului ThinkUp Academy.
+- Nu contine secrete: toate cheile se citesc din variabile de mediu (vezi `.env.example`); `.env.local` nu este in repo.
+- Emailurile si numele din `supabase/tests/` si `supabase/seed_superadmin.sql` sunt date sintetice / placeholdere.
