@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { FormActionButton } from "@/components/form-action-button";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
 import { canRevokeInvitation, canSeeInvitations, invitableRoles, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
+import { DEFAULT_PAGE_SIZE, pageRange, parsePage } from "@/lib/pagination";
 import { revokeInvitation } from "./actions";
 import { InviteForm } from "./invite-form";
 
@@ -23,19 +25,21 @@ type InvitationRow = {
   departments: { name: string } | null;
 };
 
-export default async function InvitationsPage() {
+export default async function InvitationsPage(props: PageProps<"/admin/invitations">) {
   const profile = await requireProfile();
   if (!profile || !canSeeInvitations(profile)) redirect("/dashboard");
+  const page = parsePage((await props.searchParams).page);
 
   // User client: RLS (dept_read, inv_read) decides what comes back.
   const db = createUserClient();
+  const range = pageRange(page, DEFAULT_PAGE_SIZE);
   const [departments, invitations] = await Promise.all([
     db.from("departments").select("id, name").order("id"),
     db
       .from("invitations")
-      .select("id, email, role, status, invited_by, created_at, departments(name)")
+      .select("id, email, role, status, invited_by, created_at, departments(name)", { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(100),
+      .range(range.from, range.to),
   ]);
 
   const roles = invitableRoles(profile);
@@ -79,24 +83,28 @@ export default async function InvitationsPage() {
           ) : invitations.data.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nicio invitație încă.</p>
           ) : (
-            <ul className="divide-y">
-              {(invitations.data as unknown as InvitationRow[]).map((inv) => (
-                <li key={inv.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm">
-                  <span className="min-w-0 flex-1 truncate font-medium">{inv.email}</span>
-                  <span className="text-muted-foreground">
-                    {ROLE_LABELS[inv.role]}
-                    {inv.departments ? ` · ${inv.departments.name}` : ""}
-                  </span>
-                  <Badge variant={inv.status === "pending" ? "default" : "outline"}>{STATUS_LABELS[inv.status]}</Badge>
-                  <time className="text-xs text-muted-foreground" dateTime={inv.created_at}>
-                    {dateFmt.format(new Date(inv.created_at))}
-                  </time>
-                  {inv.status === "pending" && canRevokeInvitation(profile, inv.invited_by) && (
-                    <FormActionButton action={revokeInvitation} id={inv.id} label="Revocă" />
-                  )}
-                </li>
-              ))}
-            </ul>
+            <>
+              <Pagination basePath="/admin/invitations" page={page} pageSize={DEFAULT_PAGE_SIZE} total={invitations.count ?? 0} label="invitații" />
+              <ul className="divide-y">
+                {((invitations.data ?? []) as unknown as InvitationRow[]).map((inv) => (
+                  <li key={inv.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-medium">{inv.email}</span>
+                    <span className="text-muted-foreground">
+                      {ROLE_LABELS[inv.role]}
+                      {inv.departments ? ` · ${inv.departments.name}` : ""}
+                    </span>
+                    <Badge variant={inv.status === "pending" ? "default" : "outline"}>{STATUS_LABELS[inv.status]}</Badge>
+                    <time className="text-xs text-muted-foreground" dateTime={inv.created_at}>
+                      {dateFmt.format(new Date(inv.created_at))}
+                    </time>
+                    {inv.status === "pending" && canRevokeInvitation(profile, inv.invited_by) && (
+                      <FormActionButton action={revokeInvitation} id={inv.id} label="Revocă" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <Pagination basePath="/admin/invitations" page={page} pageSize={DEFAULT_PAGE_SIZE} total={invitations.count ?? 0} label="invitații" />
+            </>
           )}
         </CardContent>
       </Card>

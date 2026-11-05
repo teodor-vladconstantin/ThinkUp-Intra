@@ -9,7 +9,7 @@ import { activeAnnouncements } from "@/lib/announcements";
 import { requireProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import { createUserClient } from "@/lib/supabase/server";
-import { listTasks } from "@/lib/tasks-server";
+import { myAlertCounts, listTasks } from "@/lib/tasks-server";
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
@@ -18,9 +18,10 @@ export default async function DashboardPage() {
 
   // Open tasks assigned to me (the alert banner counts come from the same rows) + active announcements.
   const db = createUserClient();
-  const [mine, announcements] = await Promise.all([
-    listTasks(db, (q) => q.eq("assignee_id", profile.clerkId).neq("status", "done")),
+  const [{ tasks: mine }, announcements, alertCounts] = await Promise.all([
+    listTasks(db, (q) => q.eq("assignee_id", profile.clerkId).neq("status", "done"), 1, 6),
     activeAnnouncements(db),
+    myAlertCounts(db, profile),
   ]);
 
   return (
@@ -33,8 +34,8 @@ export default async function DashboardPage() {
       <AnnouncementBanner items={announcements} />
 
       <AlertBanner
-        overdue={mine.filter((t) => t.alert === "overdue").length}
-        dueSoon={mine.filter((t) => t.alert === "due_soon").length}
+        overdue={alertCounts.overdue}
+        dueSoon={alertCounts.dueSoon}
       />
 
       <div className="grid gap-4">

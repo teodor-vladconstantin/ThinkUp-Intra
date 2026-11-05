@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { requireProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import { meetingLabel } from "@/lib/meetings";
 import { createUserClient } from "@/lib/supabase/server";
+import { DEFAULT_PAGE_SIZE, pageRange, parsePage } from "@/lib/pagination";
 import { escapeLike } from "@/lib/utils";
 
 type Row = {
@@ -27,16 +29,19 @@ export default async function DecisionsPage(props: PageProps<"/decisions">) {
   const sp = await props.searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 200) : "";
   const scope = sp.scope === "cd" || sp.scope === "department" ? sp.scope : "";
+  const page = parsePage(sp.page);
+  const range = pageRange(page, DEFAULT_PAGE_SIZE);
 
   // meetings!inner: an inner join, so filtering on meeting.kind drops non-matching decisions.
   let query = createUserClient()
     .from("decisions")
-    .select("id, text, decided_at, author:profiles!author_id(full_name), meeting:meetings!inner(id, title, kind, department:departments(name))")
+    .select("id, text, decided_at, author:profiles!author_id(full_name), meeting:meetings!inner(id, title, kind, department:departments(name))", { count: "exact" })
     .order("decided_at", { ascending: false })
-    .limit(200);
+    .range(range.from, range.to);
   if (q) query = query.ilike("text", `%${escapeLike(q)}%`);
   if (scope) query = query.eq("meeting.kind", scope);
-  const { data } = await query;
+  const { data, count, error } = await query;
+  if (error) throw new Error("Could not load decisions");
   const decisions = (data ?? []) as unknown as Row[];
 
   return (
@@ -63,6 +68,15 @@ export default async function DecisionsPage(props: PageProps<"/decisions">) {
         <Button type="submit" variant="outline">Caută</Button>
       </form>
 
+      <Pagination
+        basePath="/decisions"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(q ? { q } : {}), ...(scope ? { scope } : {}) }}
+        label="decizii"
+      />
+
       {decisions.length === 0 ? (
         <p className="text-sm text-muted-foreground">{q ? "Nicio decizie găsită." : "Nicio decizie încă."}</p>
       ) : (
@@ -83,6 +97,14 @@ export default async function DecisionsPage(props: PageProps<"/decisions">) {
           ))}
         </ul>
       )}
+      <Pagination
+        basePath="/decisions"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(q ? { q } : {}), ...(scope ? { scope } : {}) }}
+        label="decizii"
+      />
     </div>
   );
 }

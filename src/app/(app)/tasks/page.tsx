@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
+import { DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { createUserClient } from "@/lib/supabase/server";
 import { listTasks } from "@/lib/tasks-server";
 import { cn } from "@/lib/utils";
@@ -15,19 +17,20 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const profile = await requireProfile();
   if (!profile) redirect("/sign-in");
   const sp = await props.searchParams;
+  const page = parsePage(sp.page);
 
   const isMentor = profile.role === "mentor";
   const scope = isMentor && sp.scope !== "mine" ? "dept" : "mine";
   const overdueOnly = sp.alert === "overdue";
 
-  const tasks = await listTasks(createUserClient(), (q) => {
+  const { tasks, total } = await listTasks(createUserClient(), (q) => {
     let query =
       scope === "dept" && profile.departmentId !== null
         ? q.or(`department_id.eq.${profile.departmentId},requesting_department_id.eq.${profile.departmentId}`)
         : q.eq("assignee_id", profile.clerkId);
     if (overdueOnly) query = query.eq("alert", "overdue");
     return query;
-  });
+  }, page);
 
   const open = tasks.filter((t) => t.status !== "done");
   const done = tasks.filter((t) => t.status === "done");
@@ -57,6 +60,15 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         {overdueOnly && !isMentor && <FilterLink href="/tasks" active={false}>Toate</FilterLink>}
       </nav>
 
+      <Pagination
+        basePath="/tasks"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={total}
+        params={{ ...(scope === "mine" && isMentor ? { scope: "mine" } : {}), ...(overdueOnly ? { alert: "overdue" } : {}) }}
+        label="sarcini"
+      />
+
       {open.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nicio sarcină deschisă.</p>
       ) : (
@@ -77,6 +89,14 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
           </div>
         </details>
       )}
+      <Pagination
+        basePath="/tasks"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={total}
+        params={{ ...(scope === "mine" && isMentor ? { scope: "mine" } : {}), ...(overdueOnly ? { alert: "overdue" } : {}) }}
+        label="sarcini"
+      />
     </div>
   );
 }
