@@ -30,6 +30,6 @@ for tables, RLS helper functions, policies and the county seed. Apply them in or
 
 ## Stare si drepturi
 
-- Cod sursa al intranetului intern ThinkUp Academy, dezvoltat de Teodor-Vlad Constantin. Nu are licenta: toate drepturile sunt rezervate pana la clarificarea acordului ThinkUp Academy.
+- Source code of the internal intranet of ThinkUp Academy, developed by Teodor-Vlad Constantin (Tech Director) and published with ThinkUp Academy's permission. Released under the MIT License (see `LICENSE`), copyright (c) 2026 Teodor-Vlad Constantin. The ThinkUp name and logo remain the property of ThinkUp Academy and are not covered by the license.
 - Nu contine secrete: toate cheile se citesc din variabile de mediu (vezi `.env.example`); `.env.local` nu este in repo.
 - Emailurile si numele din `supabase/tests/` si `supabase/seed_superadmin.sql` sunt date sintetice / placeholdere.
