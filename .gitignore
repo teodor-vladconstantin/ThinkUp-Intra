@@ -50,3 +50,6 @@ next-env.d.ts
 
 # vercel cli project link
 /.vercel
+
+# Claude Code transcripts pasted in the repo root (never commit)
+/*pastedcontent*.txt
