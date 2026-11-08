@@ -42,10 +42,21 @@ export async function createDocument(_prev: FormState, formData: FormData): Prom
 }
 
 // Archive, never delete (PRD 7). RLS (docs_update) limits this to the creator or superadmin.
-export async function archiveDocument(formData: FormData) {
+export async function archiveDocument(_prev: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireProfile();
+  if (!actor) return { ok: false, message: "Nu ești autentificat." };
+
   const id = z.uuid().safeParse(formData.get("id"));
-  if (!actor || !id.success) return;
-  await createUserClient().from("documents").update({ archived: true }).eq("id", id.data);
+  if (!id.success) return { ok: false, message: "Document invalid." };
+
+  const { data, error } = await createUserClient()
+    .from("documents")
+    .update({ archived: true })
+    .eq("id", id.data)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { ok: false, message: "Documentul nu a putut fi arhivat sau nu ai permisiunea." };
+
   revalidatePath("/documents");
+  return { ok: true, message: "Document arhivat." };
 }
