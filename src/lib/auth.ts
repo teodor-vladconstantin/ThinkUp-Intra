@@ -81,7 +81,16 @@ export const getCurrentProfile = cache(async (): Promise<ProfileResult | null> =
     .limit(1)
     .maybeSingle();
   if (invitation.error) throw new Error("Could not load invitation");
-  if (!invitation.data) return { status: "no-access", reason: "no-invitation" };
+  if (!invitation.data) {
+    // Same verified email, new Clerk account (the person re-created theirs): move the existing
+    // profile to the new id. Foreign keys cascade on update (migration 20261108000000).
+    const moved = await db.from("profiles").update({ clerk_id: userId }).ilike("email", pattern).neq("clerk_id", userId).select("clerk_id");
+    if (moved.error) throw new Error("Could not relink profile");
+    if (!moved.data?.length) return { status: "no-access", reason: "no-invitation" };
+    const relinked = await db.from("profiles").select(PROFILE_COLUMNS).eq("clerk_id", userId).single();
+    if (relinked.error) throw new Error("Could not load profile");
+    return toResult(db, relinked.data as unknown as ProfileRow);
+  }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || null;
 
