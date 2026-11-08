@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/pagination";
+import { FormActionButton } from "@/components/form-action-button";
 import { SectionLabel } from "@/components/section-label";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
 import { canRevokeInvitation, canSeeInvitations, invitableRoles, ROLE_LABELS, type AppRole } from "@/lib/permissions";
@@ -98,10 +98,7 @@ export default async function InvitationsPage(props: PageProps<"/admin/invitatio
                       {dateFmt.format(new Date(inv.created_at))}
                     </time>
                     {inv.status === "pending" && canRevokeInvitation(profile, inv.invited_by) && (
-                      <form action={revokeInvitation}>
-                        <input type="hidden" name="id" value={inv.id} />
-                        <Button type="submit" variant="ghost" size="sm">Revocă</Button>
-                      </form>
+                      <FormActionButton action={revokeInvitation} id={inv.id} label="Revocă" />
                     )}
                   </li>
                 ))}

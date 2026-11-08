@@ -42,10 +42,21 @@ export async function createAnnouncement(_prev: FormState, formData: FormData): 
 }
 
 // RLS (ann_update) limits this to the author or superadmin.
-export async function archiveAnnouncement(formData: FormData) {
+export async function archiveAnnouncement(_prev: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireProfile();
+  if (!actor) return { ok: false, message: "Nu ești autentificat." };
+
   const id = z.uuid().safeParse(formData.get("id"));
-  if (!actor || !id.success) return;
-  await createUserClient().from("announcements").update({ archived: true }).eq("id", id.data);
+  if (!id.success) return { ok: false, message: "Anunț invalid." };
+
+  const { data, error } = await createUserClient()
+    .from("announcements")
+    .update({ archived: true })
+    .eq("id", id.data)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { ok: false, message: "Anunțul nu a putut fi arhivat sau nu ai permisiunea." };
+
   revalidatePath("/", "layout");
+  return { ok: true, message: "Anunț arhivat." };
 }

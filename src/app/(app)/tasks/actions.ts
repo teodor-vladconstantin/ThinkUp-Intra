@@ -195,13 +195,22 @@ export async function updateTaskStatus(formData: FormData) {
   refreshAll();
 }
 
-export async function archiveTask(formData: FormData) {
+export async function archiveTask(_prev: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireProfile();
+  if (!actor) return { ok: false, message: "Nu ești autentificat." };
+
   const id = uuid.safeParse(formData.get("id"));
-  if (!actor || !id.success) return;
+  if (!id.success) return { ok: false, message: "Sarcină invalidă." };
 
   // No hard delete anywhere (PRD 5.1): archived tasks disappear from lists, history stays.
-  await createUserClient().from("tasks").update({ archived: true }).eq("id", id.data);
+  const { data, error } = await createUserClient()
+    .from("tasks")
+    .update({ archived: true })
+    .eq("id", id.data)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { ok: false, message: "Sarcina nu a putut fi arhivată sau nu ai permisiunea." };
+
   refreshAll();
   redirect("/tasks");
 }
