@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { SheetEvaluationForm, StudentSheetForm, type StudentSheetRecord } from "@/components/platform/student-sheet-form";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { CRITERIA, MAX_CHALLENGE_SCORE, isPlatformMentor, platformPeople, requirePlatformProfile, signedUrls } from "@/lib/platform";
 import { createUserClient } from "@/lib/supabase/server";
@@ -40,6 +41,7 @@ type Project = {
   description: string | null;
   created_by: string;
   challenge_id: string | null;
+  challenge: { name: string }[];
   thumbnail_path: string | null;
   accept_reviews: boolean;
   archived: boolean;
@@ -50,6 +52,8 @@ type Material = { id: string; name: string; description: string | null; files: {
 type Review = { id: string; author_id: string; rating: number; body: string | null; created_at: string };
 type Feedback = { id: string; mentor_id: string; body: string; created_at: string };
 type Grade = { student_id: string; score: number; innovation: number; impact: number; feedback_score: number; efficiency: number; challenge: { name: string } | null };
+type SheetPhoto = { id: string; student_id: string; category: "preparation" | "activity" | "participants"; name: string; storage_path: string };
+type SheetEvaluation = { student_id: string; innovation: number; impact: number; feedback_score: number; efficiency: number };
 
 export default async function ProjectPage(props: PageProps<"/platform/projects/[id]">) {
   const me = await requirePlatformProfile();
@@ -59,14 +63,14 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const db = createUserClient();
   const { data } = await db
     .from("projects")
-    .select("id, name, description, created_by, challenge_id, thumbnail_path, accept_reviews, archived, created_at")
+    .select("id, name, description, created_by, challenge_id, challenge:challenges(name), thumbnail_path, accept_reviews, archived, created_at")
     .eq("id", pid.data)
     .maybeSingle();
   if (!data) notFound();
   const project = data as Project;
   const mentor = isPlatformMentor(me);
 
-  const [members, photos, goals, materials, reviews, feedback, challenges, grades, people] = await Promise.all([
+  const [members, photos, goals, materials, reviews, feedback, challenges, grades, people, studentSheets, sheetPhotos, sheetEvaluations] = await Promise.all([
     db.from("project_members").select("profile_id").eq("project_id", project.id),
     db.from("project_photos").select("id, storage_path").eq("project_id", project.id).order("created_at"),
     db.from("goals").select("id, name, description, progress, deadline").eq("project_id", project.id).order("created_at"),
@@ -77,7 +81,17 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
     // RLS: PN sees every grade, a student only their own.
     db.from("submissions").select("student_id, score, innovation, impact, feedback_score, efficiency, challenge:challenges(name)").eq("project_id", project.id),
     platformPeople(db),
+    db
+      .from("project_student_sheets")
+      .select("id, project_id, student_id, student_name, school_name, zone_county, challenge_title, activity_date, participants_count, activity_description, special_activity, participant_feedback, guest_name, guest_occupation, guest_reason, guest_topics, improvements, planning_timeline, materials_timeline, promotion_timeline, activity_timeline, feedback_timeline, updated_at")
+      .eq("project_id", project.id)
+      .order("updated_at", { ascending: false }),
+    db.from("project_student_sheet_photos").select("id, student_id, category, name, storage_path").eq("project_id", project.id).order("created_at"),
+    db.from("project_student_sheet_evaluations").select("student_id, innovation, impact, feedback_score, efficiency").eq("project_id", project.id),
   ]);
+  if (studentSheets.error || sheetPhotos.error || sheetEvaluations.error) {
+    throw new Error("Could not load student sheets");
+  }
 
   const memberIds = (members.data ?? []).map((m) => m.profile_id as string);
   const isMember = memberIds.includes(me.clerkId);
@@ -85,7 +99,15 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const materialRows = (materials.data ?? []) as unknown as Material[];
   const reviewRows = (reviews.data ?? []) as Review[];
   const challengeRows = (challenges.data ?? []) as { id: string; name: string }[];
-  const urls = await signedUrls(db, "project-files", [...photoRows.map((p) => p.storage_path), ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path))]);
+  const sheetRows = (studentSheets.data ?? []) as StudentSheetRecord[];
+  const sheetPhotoRows = (sheetPhotos.data ?? []) as SheetPhoto[];
+  const sheetEvaluationRows = (sheetEvaluations.data ?? []) as SheetEvaluation[];
+  const urls = await signedUrls(db, "project-files", [
+    ...photoRows.map((p) => p.storage_path),
+    ...materialRows.flatMap((m) => m.files.map((f) => f.storage_path)),
+    ...sheetPhotoRows.map((p) => p.storage_path),
+  ]);
+  const evaluations = new Map(sheetEvaluationRows.map((evaluation) => [evaluation.student_id, evaluation]));
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
   const canReview = !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
@@ -153,6 +175,126 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
             </CardContent>
           </Card>
 
+          {(isMember || mentor) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fișa elevului ambasador</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {isMember && (
+                  <StudentSheetForm
+                    projectId={project.id}
+                    studentName={me.fullName ?? ""}
+                    challengeTitle={project.challenge[0]?.name ?? ""}
+                    sheet={sheetRows.find((sheet) => sheet.student_id === me.clerkId) ?? null}
+                    photos={sheetPhotoRows
+                      .filter((photo) => photo.student_id === me.clerkId)
+                      .flatMap((photo) => {
+                        const url = urls.get(photo.storage_path);
+                        return url ? [{ ...photo, url }] : [];
+                      })}
+                  />
+                )}
+
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold">Răspunsuri pentru proiect ({sheetRows.length})</h2>
+                  {sheetRows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nicio fișă completată încă.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border">
+                      <table className="w-full min-w-[1400px] table-fixed text-sm">
+                        <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+                          <tr>
+                            <th className="w-36 p-3 font-medium">Elev</th>
+                            <th className="w-48 p-3 font-medium">Informații generale</th>
+                            <th className="w-56 p-3 font-medium">Descrierea activității</th>
+                            <th className="w-56 p-3 font-medium">Ce a fost special?</th>
+                            <th className="w-56 p-3 font-medium">Feedback participanți</th>
+                            <th className="w-48 p-3 font-medium">Invitat</th>
+                            <th className="w-48 p-3 font-medium">Îmbunătățiri</th>
+                            <th className="w-56 p-3 font-medium">Timeline</th>
+                            <th className="w-44 p-3 font-medium">Poze</th>
+                            <th className="w-64 p-3 font-medium">Evaluare organizatori</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sheetRows.map((sheet) => {
+                            const evaluation = evaluations.get(sheet.student_id) ?? null;
+                            const photosForStudent = sheetPhotoRows.filter((photo) => photo.student_id === sheet.student_id);
+                            return (
+                              <tr key={sheet.id} className="border-t align-top">
+                                <td className="p-3">
+                                  <p className="font-medium">{sheet.student_name}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">Actualizată {formatDateTime(sheet.updated_at)}</p>
+                                </td>
+                                <td className="whitespace-pre-wrap break-words p-3">
+                                  {sheet.school_name}
+                                  {"\n"}{sheet.zone_county}
+                                  {"\n"}Challenge: {sheet.challenge_title}
+                                  {"\n"}{formatDate(sheet.activity_date)}
+                                  {"\n"}Participanți: {sheet.participants_count}
+                                </td>
+                                <ResponseCell>{sheet.activity_description}</ResponseCell>
+                                <ResponseCell>{sheet.special_activity}</ResponseCell>
+                                <ResponseCell>{sheet.participant_feedback}</ResponseCell>
+                                <ResponseCell>
+                                  {[sheet.guest_name, sheet.guest_occupation, sheet.guest_reason, sheet.guest_topics].filter(Boolean).join("\n")}
+                                </ResponseCell>
+                                <ResponseCell>{sheet.improvements}</ResponseCell>
+                                <ResponseCell>
+                                  {[
+                                    ["Planificare", sheet.planning_timeline],
+                                    ["Materiale", sheet.materials_timeline],
+                                    ["Promovare", sheet.promotion_timeline],
+                                    ["Eveniment", sheet.activity_timeline],
+                                    ["Feedback", sheet.feedback_timeline],
+                                  ].map(([label, answer]) => `${label}: ${answer}`).join("\n")}
+                                </ResponseCell>
+                                <td className="space-y-2 break-words p-3">
+                                  {photosForStudent.length === 0 ? (
+                                    <span className="text-muted-foreground">—</span>
+                                  ) : (
+                                    <ul className="space-y-1">
+                                      {photosForStudent.map((photo) => {
+                                        const url = urls.get(photo.storage_path);
+                                        return url ? (
+                                          <li key={photo.id}>
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">
+                                              {photo.name} · {photo.category === "preparation" ? "pregătire" : photo.category === "activity" ? "activitate" : "participanți"}
+                                            </a>
+                                          </li>
+                                        ) : null;
+                                      })}
+                                    </ul>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  {mentor ? (
+                                    <SheetEvaluationForm sheetId={sheet.id} evaluation={evaluation} />
+                                  ) : evaluation ? (
+                                    <p className="whitespace-pre-line text-xs">
+                                      Inovație {evaluation.innovation} · Impact {evaluation.impact} · Feedback {evaluation.feedback_score} · Eficiență {evaluation.efficiency}
+                                      {"\n"}Total: {evaluation.innovation + evaluation.impact + evaluation.feedback_score + evaluation.efficiency} / 20
+                                    </p>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Necompletată</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Organizatorii evaluează fiecare criteriu de la 1 la 5 puncte: inovație, impact, feedback și eficiență (maximum 20).
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* ---------- materials ---------- */}
           <Card>
             <CardHeader>
@@ -190,7 +332,12 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                         </li>
                       ))}
                     </ul>
-                    {isMember && <FileUpload bucket="project-files" folder={project.id} label="Încarcă fișier" complete={attachMaterialFile.bind(null, m.id)} />}
+                    {isMember && (
+                      <div className="space-y-1">
+                        <FileUpload bucket="project-files" folder={project.id} label="Încarcă fișier (fără PDF)" rejectPdf complete={attachMaterialFile.bind(null, m.id)} />
+                        <p className="text-xs text-muted-foreground">Completează fișa elevului în formularul proiectului.</p>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -416,4 +563,8 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
       </div>
     </div>
   );
+}
+
+function ResponseCell({ children }: { children: React.ReactNode }) {
+  return <td className="whitespace-pre-wrap break-words p-3">{children || "—"}</td>;
 }

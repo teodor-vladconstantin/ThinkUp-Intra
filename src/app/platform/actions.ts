@@ -198,10 +198,148 @@ export async function deleteMaterial(materialId: string): Promise<FormState> {
 export async function attachMaterialFile(materialId: string, file: z.infer<typeof fileMeta>): Promise<FormState> {
   const f = fileMeta.safeParse(file);
   if (!(await actor()) || !id.safeParse(materialId).success || !f.success) return fail("Cerere invalidă.");
+  if (f.data.type?.toLowerCase() === "application/pdf" || f.data.name.toLowerCase().endsWith(".pdf")) {
+    return fail("Fișa elevului se completează în formularul proiectului, nu prin încărcarea unui PDF.");
+  }
   const { error } = await createUserClient()
     .from("material_files")
     .insert({ material_id: materialId, storage_path: f.data.path, name: f.data.name, file_type: f.data.type ?? null });
   return error ? fail("Fișierul nu a putut fi atașat.") : done("Fișier încărcat.");
+}
+
+const studentSheetSchema = z.object({
+  projectId: id,
+  studentName: z.string().trim().min(1, "Numele e obligatoriu").max(150),
+  schoolName: z.string().trim().min(1, "Liceul e obligatoriu").max(200),
+  zoneCounty: z.string().trim().min(1, "Zona / județul e obligatoriu").max(120),
+  challengeTitle: z.string().trim().min(1, "Titlul challenge-ului e obligatoriu").max(200),
+  activityDate: z.iso.date("Data activității este invalidă."),
+  participantsCount: z.coerce.number().int().min(0).max(100000),
+  activityDescription: z.string().trim().min(1, "Descrie activitatea.").max(4000),
+  specialActivity: z.string().trim().min(1, "Descrie ce a avut special activitatea.").max(3000),
+  participantFeedback: z.string().trim().min(1, "Adaugă feedbackul participanților.").max(4000),
+  guestName: optionalText(150),
+  guestOccupation: optionalText(300),
+  guestReason: optionalText(2000),
+  guestTopics: optionalText(2000),
+  improvements: z.string().trim().min(1, "Adaugă cel puțin o idee de îmbunătățire.").max(3000),
+  planningTimeline: z.string().trim().min(1, "Completează planificarea activității.").max(1500),
+  materialsTimeline: z.string().trim().min(1, "Completează pregătirea materialelor.").max(1500),
+  promotionTimeline: z.string().trim().min(1, "Completează promovarea activității.").max(1500),
+  activityTimeline: z.string().trim().min(1, "Completează desfășurarea evenimentului.").max(1500),
+  feedbackTimeline: z.string().trim().min(1, "Completează colectarea feedbackului.").max(1500),
+});
+
+export async function saveStudentSheet(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await actor();
+  const parsed = studentSheetSchema.safeParse(Object.fromEntries(formData));
+  if (!me) return fail("Nu ai acces.");
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  const f = parsed.data;
+
+  const { error } = await createUserClient().from("project_student_sheets").upsert(
+    {
+      project_id: f.projectId,
+      student_id: me.clerkId,
+      student_name: f.studentName,
+      school_name: f.schoolName,
+      zone_county: f.zoneCounty,
+      challenge_title: f.challengeTitle,
+      activity_date: f.activityDate,
+      participants_count: f.participantsCount,
+      activity_description: f.activityDescription,
+      special_activity: f.specialActivity,
+      participant_feedback: f.participantFeedback,
+      guest_name: f.guestName ?? null,
+      guest_occupation: f.guestOccupation ?? null,
+      guest_reason: f.guestReason ?? null,
+      guest_topics: f.guestTopics ?? null,
+      improvements: f.improvements,
+      planning_timeline: f.planningTimeline,
+      materials_timeline: f.materialsTimeline,
+      promotion_timeline: f.promotionTimeline,
+      activity_timeline: f.activityTimeline,
+      feedback_timeline: f.feedbackTimeline,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "project_id,student_id" },
+  );
+  if (error) return fail("Fișa nu a putut fi salvată. Verifică dacă ești membru al proiectului.");
+  revalidatePath(`/platform/projects/${f.projectId}`);
+  return { ok: true, message: "Fișa a fost salvată." };
+}
+
+export async function addStudentSheetPhoto(projectId: string, category: string, file: z.infer<typeof fileMeta>): Promise<FormState> {
+  const me = await actor();
+  const project = id.safeParse(projectId);
+  const photoCategory = z.enum(["preparation", "activity", "participants"]).safeParse(category);
+  const parsedFile = fileMeta.safeParse(file);
+  if (!me || !project.success || !photoCategory.success || !parsedFile.success) return fail("Cerere invalidă.");
+  if (!parsedFile.data.path.startsWith(`${project.data}/`) || !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(parsedFile.data.type ?? "")) {
+    return fail("Alege o fotografie JPEG, PNG, WebP sau GIF din proiect.");
+  }
+
+  const db = createUserClient();
+  const { data: sheet, error: sheetError } = await db
+    .from("project_student_sheets")
+    .select("id")
+    .eq("project_id", project.data)
+    .eq("student_id", me.clerkId)
+    .maybeSingle();
+  if (sheetError || !sheet) return fail("Salvează fișa înainte de a adăuga fotografii.");
+
+  const { error } = await db.from("project_student_sheet_photos").insert({
+    project_id: project.data,
+    student_id: me.clerkId,
+    category: photoCategory.data,
+    name: parsedFile.data.name,
+    storage_path: parsedFile.data.path,
+  });
+  if (error) return fail("Fotografia nu a putut fi atașată fișei.");
+  revalidatePath(`/platform/projects/${project.data}`);
+  return { ok: true, message: "Fotografie adăugată." };
+}
+
+const sheetRating = z.coerce.number().int().min(1).max(5);
+
+export async function saveStudentSheetEvaluation(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await actor();
+  const parsed = z
+    .object({
+      sheetId: id,
+      innovation: sheetRating,
+      impact: sheetRating,
+      feedback_score: sheetRating,
+      efficiency: sheetRating,
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!me || !isPlatformMentor(me)) return fail("Doar organizatorii PN pot evalua fișele.");
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+
+  const db = createUserClient();
+  const { data: sheet, error: sheetError } = await db
+    .from("project_student_sheets")
+    .select("project_id, student_id")
+    .eq("id", parsed.data.sheetId)
+    .maybeSingle();
+  if (sheetError || !sheet) return fail("Fișa nu a fost găsită.");
+
+  const { error } = await db.from("project_student_sheet_evaluations").upsert(
+    {
+      project_id: sheet.project_id,
+      student_id: sheet.student_id,
+      innovation: parsed.data.innovation,
+      impact: parsed.data.impact,
+      feedback_score: parsed.data.feedback_score,
+      efficiency: parsed.data.efficiency,
+      updated_by: me.clerkId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "project_id,student_id" },
+  );
+  if (error) return fail("Evaluarea nu a putut fi salvată.");
+  revalidatePath(`/platform/projects/${sheet.project_id}`);
+  return { ok: true, message: "Evaluare salvată." };
 }
 
 export async function deleteMaterialFile(fileId: string): Promise<FormState> {

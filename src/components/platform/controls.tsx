@@ -118,12 +118,14 @@ export function FileUpload({
   accept,
   label,
   complete,
+  rejectPdf = false,
 }: {
   bucket: Bucket;
   folder: string;
   accept?: string;
   label: string;
   complete: (file: UploadedFile) => Promise<FormState>;
+  rejectPdf?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [state, setState] = useState<FormState>(null);
@@ -148,7 +150,16 @@ export function FileUpload({
         accept={accept}
         className="sr-only"
         id={`upload-${bucket}-${folder}-${label}`}
-        onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          if (rejectPdf && (file.type.toLowerCase() === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))) {
+            setState({ ok: false, message: "Fișa elevului se completează în formularul de mai sus, nu prin încărcarea unui PDF." });
+            e.target.value = "";
+            return;
+          }
+          upload(file);
+        }}
       />
       <Button asChild size="sm" variant="outline" className="rounded-full" aria-disabled={pending}>
         <label htmlFor={`upload-${bucket}-${folder}-${label}`} className="cursor-pointer">
