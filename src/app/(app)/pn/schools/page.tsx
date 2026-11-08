@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
 import { SchoolForm } from "@/components/pn/school-form";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { requireProfile } from "@/lib/auth";
 import { isPnMember } from "@/lib/permissions";
 import { SCHOOL_STATUS_LABELS, SCHOOL_STATUSES, type SchoolStatus } from "@/lib/pn";
 import { createUserClient } from "@/lib/supabase/server";
+import { DEFAULT_PAGE_SIZE, pageRange, parsePage } from "@/lib/pagination";
 import { escapeLike } from "@/lib/utils";
 import { createSchool } from "../actions";
 
@@ -20,13 +22,19 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 100) : "";
   const county = typeof sp.county === "string" && /^[A-Z]{1,2}$/.test(sp.county) ? sp.county : "";
   const status = SCHOOL_STATUSES.find((s) => s === sp.status) ?? "";
+  const page = parsePage(sp.page);
+  const range = pageRange(page, DEFAULT_PAGE_SIZE);
 
   const db = createUserClient();
-  let query = db.from("schools").select("id, name, city, status, county:counties(code, name)").order("name").limit(500);
+  let query = db.from("schools").select("id, name, city, status, county:counties(code, name)", { count: "exact" }).order("name");
   if (q) query = query.ilike("name", `%${escapeLike(q)}%`);
   if (county) query = query.eq("county_code", county);
   if (status) query = query.eq("status", status);
-  const [{ data }, { data: counties }] = await Promise.all([query, db.from("counties").select("code, name").order("name")]);
+  const [{ data, count, error }, { data: counties }] = await Promise.all([
+    query.range(range.from, range.to),
+    db.from("counties").select("code, name").order("name"),
+  ]);
+  if (error) throw new Error("Could not load schools");
   const schools = (data ?? []) as unknown as Row[];
 
   return (
@@ -61,6 +69,15 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
         </details>
       )}
 
+      <Pagination
+        basePath="/pn/schools"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(q ? { q } : {}), ...(county ? { county } : {}), ...(status ? { status } : {}) }}
+        label="licee"
+      />
+
       {schools.length === 0 ? (
         <p className="text-sm text-muted-foreground">Niciun liceu.</p>
       ) : (
@@ -78,6 +95,14 @@ export default async function SchoolsPage(props: PageProps<"/pn/schools">) {
           ))}
         </ul>
       )}
+      <Pagination
+        basePath="/pn/schools"
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={count ?? 0}
+        params={{ ...(q ? { q } : {}), ...(county ? { county } : {}), ...(status ? { status } : {}) }}
+        label="licee"
+      />
     </div>
   );
 }
