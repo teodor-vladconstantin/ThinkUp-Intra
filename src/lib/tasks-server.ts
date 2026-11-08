@@ -1,6 +1,7 @@
 import "server-only";
 import { fillMissingNames, type Profile } from "@/lib/auth";
 import { canMoveTask } from "@/lib/permissions";
+import { DEFAULT_PAGE_SIZE, pageRange } from "@/lib/pagination";
 import { createUserClient } from "@/lib/supabase/server";
 import { sortTasks, TASK_SELECT, type Task } from "@/lib/tasks";
 
@@ -29,16 +30,25 @@ export async function loadTaskFormOptions(db: Db, actor: Profile) {
   };
 }
 
-// ponytail: hard cap of 500 rows per list; add pagination if a single view ever needs more.
-const baseQuery = (db: Db) => db.from("tasks_with_alert").select(TASK_SELECT).eq("archived", false).limit(500);
+const baseQuery = (db: Db) => db.from("tasks_with_alert").select(TASK_SELECT, { count: "exact" }).eq("archived", false);
 export type TaskQuery = ReturnType<typeof baseQuery>;
 
 // Non-archived tasks from the alert view, sorted overdue first. `narrow` adds filters.
-export async function listTasks(db: Db, narrow: (q: TaskQuery) => TaskQuery = (q) => q) {
-  const { data, error } = await narrow(baseQuery(db));
+export async function listTasks(
+  db: Db,
+  narrow: (q: TaskQuery) => TaskQuery = (q) => q,
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+) {
+  const range = pageRange(page, pageSize);
+  const { data, error, count } = await narrow(baseQuery(db))
+    .order("created_at", { ascending: false })
+    .range(range.from, range.to);
   if (error) throw new Error("Could not load tasks");
-  // Without generated DB types supabase-js guesses embeds are arrays; to-one FKs come back as objects.
-  return sortTasks((data ?? []) as unknown as Task[]);
+  return {
+    tasks: sortTasks((data ?? []) as unknown as Task[]),
+    total: count ?? 0,
+  };
 }
 
 // Overdue / due-soon counts for the signed-in user's own tasks (layout banner, dashboard).

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { DecisionForm } from "@/components/meetings/decision-form";
 import { MeetingForm } from "@/components/meetings/meeting-form";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fillMissingNames, requireProfile } from "@/lib/auth";
 import { dateInputValue, formatDate } from "@/lib/dates";
 import { MEETING_SELECT, meetingLabel, type Meeting } from "@/lib/meetings";
+import { DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { canWriteMeeting } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
 import { listTasks } from "@/lib/tasks-server";
@@ -23,6 +25,7 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
 
   const { id } = await props.params;
   if (!z.uuid().safeParse(id).success) notFound();
+  const page = parsePage((await props.searchParams).page);
 
   // If RLS hides the meeting, it does not exist for this user.
   const db = createUserClient();
@@ -30,11 +33,12 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
   if (!data) notFound();
   const meeting = data as unknown as Meeting;
 
-  const [decisions, tasks, people] = await Promise.all([
+  const [decisions, taskPage, people] = await Promise.all([
     db.from("decisions").select("id, text, decided_at, author:profiles!author_id(full_name)").eq("meeting_id", id).order("decided_at"),
-    listTasks(db, (q) => q.eq("meeting_id", id)),
+    listTasks(db, (q) => q.eq("meeting_id", id), page),
     db.from("profiles").select("clerk_id, full_name, department_id, role, is_active").order("full_name"),
   ]);
+  const { tasks, total: taskTotal } = taskPage;
 
   if (people.data) await fillMissingNames(people.data);
   const editable =canWriteMeeting(profile, meeting.kind, meeting.department_id);
@@ -77,6 +81,13 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
               )}
             </CardHeader>
             <CardContent>
+              <Pagination
+                basePath={`/meetings/${meeting.id}`}
+                page={page}
+                pageSize={DEFAULT_PAGE_SIZE}
+                total={taskTotal}
+                label="sarcini"
+              />
               {tasks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nicio sarcină.</p>
               ) : (
@@ -86,6 +97,13 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
                   ))}
                 </div>
               )}
+              <Pagination
+                basePath={`/meetings/${meeting.id}`}
+                page={page}
+                pageSize={DEFAULT_PAGE_SIZE}
+                total={taskTotal}
+                label="sarcini"
+              />
             </CardContent>
           </Card>
 

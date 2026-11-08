@@ -1,17 +1,20 @@
 import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
 import { SectionLabel } from "@/components/section-label";
 import { TaskCard } from "@/components/tasks/task-card";
 import { requireProfile } from "@/lib/auth";
 import { isCd } from "@/lib/permissions";
 import { createUserClient } from "@/lib/supabase/server";
+import { DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { listTasks } from "@/lib/tasks-server";
 
 // Leadership view for CD (PRD 5.1): every overdue task, grouped by executing department.
-export default async function LeadershipPage() {
+export default async function LeadershipPage(props: PageProps<"/leadership">) {
   const profile = await requireProfile();
   if (!profile || !isCd(profile)) redirect("/dashboard");
 
-  const tasks = await listTasks(createUserClient(), (q) => q.eq("alert", "overdue"));
+  const page = parsePage((await props.searchParams).page);
+  const { tasks, total } = await listTasks(createUserClient(), (q) => q.eq("alert", "overdue"), page);
   const groups = Map.groupBy(tasks, (t) => t.department?.name ?? "Fără departament");
 
   return (
@@ -23,6 +26,8 @@ export default async function LeadershipPage() {
           {tasks.length === 0 ? "Nicio sarcină întârziată." : `${tasks.length} în total, pe departamente.`}
         </p>
       </div>
+
+      <Pagination basePath="/leadership" page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} label="sarcini" />
 
       {[...groups].map(([department, items]) => (
         <section key={department} className="space-y-3">
@@ -36,6 +41,7 @@ export default async function LeadershipPage() {
           </div>
         </section>
       ))}
+      <Pagination basePath="/leadership" page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} label="sarcini" />
     </div>
   );
 }
