@@ -32,7 +32,7 @@ async function actor() {
 // ---------- uploads (browser -> Storage directly, via a signed upload URL) ----------
 
 const BUCKET_FOLDER: Record<Bucket, (folder: string, me: string) => boolean> = {
-  "project-files": (f) => id.safeParse(f).success,
+  "project-files": (f) => id.safeParse(f.split("/")[0]).success,
   avatars: (f, me) => f === me,
   "open-school": (f) => f === "files",
 };
@@ -188,6 +188,129 @@ export async function setProjectSummary(projectId: string, file: z.infer<typeof 
   if (!data?.length) return fail("Nu ai dreptul.");
   if (old?.summary_path && old.summary_path !== f?.data?.path) await removeObject("project-files", old.summary_path);
   return done(f ? "Rezumat încărcat." : "Șters.");
+}
+
+// ---------- ambassador student activity sheet ----------
+
+const studentSheetSchema = z.object({
+  projectId: id,
+  studentName: z.string().trim().min(1, "Numele este obligatoriu").max(200),
+  schoolName: z.string().trim().min(1, "Liceul este obligatoriu").max(200),
+  zoneCounty: z.string().trim().min(1, "Zona/județul este obligatoriu").max(200),
+  challengeTitle: z.string().trim().min(1, "Titlul challenge-ului este obligatoriu").max(200),
+  activityDate: z.iso.date(),
+  participantsCount: z.coerce.number().int().min(0).max(100000),
+  activityDescription: z.string().trim().min(1, "Descrieți activitatea").max(10000),
+  specialActivity: z.string().trim().min(1, "Descrieți ce a fost special").max(10000),
+  participantFeedback: z.string().trim().min(1, "Adăugați feedback-ul participanților").max(10000),
+  guestName: optionalText(200),
+  guestOccupation: optionalText(300),
+  guestReason: optionalText(2000),
+  guestTopics: optionalText(4000),
+  improvements: z.string().trim().min(1, "Adăugați posibile îmbunătățiri").max(10000),
+  planningTimeline: z.string().trim().min(1, "Descrieți planificarea").max(4000),
+  materialsTimeline: z.string().trim().min(1, "Descrieți pregătirea materialelor").max(4000),
+  promotionTimeline: z.string().trim().min(1, "Descrieți promovarea").max(4000),
+  activityTimeline: z.string().trim().min(1, "Descrieți desfășurarea").max(4000),
+  feedbackTimeline: z.string().trim().min(1, "Descrieți colectarea feedback-ului").max(4000),
+});
+
+export async function saveStudentSheet(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await actor();
+  const parsed = studentSheetSchema.safeParse(Object.fromEntries(formData));
+  if (!me) return fail("Nu ai acces.");
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  const f = parsed.data;
+  const { error } = await createUserClient()
+    .from("project_student_sheets")
+    .upsert({
+      project_id: f.projectId,
+      student_id: me.clerkId,
+      student_name: f.studentName,
+      school_name: f.schoolName,
+      zone_county: f.zoneCounty,
+      challenge_title: f.challengeTitle,
+      activity_date: f.activityDate,
+      participants_count: f.participantsCount,
+      activity_description: f.activityDescription,
+      special_activity: f.specialActivity,
+      participant_feedback: f.participantFeedback,
+      guest_name: f.guestName ?? null,
+      guest_occupation: f.guestOccupation ?? null,
+      guest_reason: f.guestReason ?? null,
+      guest_topics: f.guestTopics ?? null,
+      improvements: f.improvements,
+      planning_timeline: f.planningTimeline,
+      materials_timeline: f.materialsTimeline,
+      promotion_timeline: f.promotionTimeline,
+      activity_timeline: f.activityTimeline,
+      feedback_timeline: f.feedbackTimeline,
+    }, { onConflict: "project_id,student_id" });
+  return error ? fail("Fișa nu a putut fi salvată.") : done("Fișa a fost salvată.");
+}
+
+const sheetCategory = z.enum(["preparation", "activity", "participants"]);
+
+export async function addStudentSheetPhoto(
+  projectId: string,
+  category: z.infer<typeof sheetCategory>,
+  file: z.infer<typeof fileMeta>,
+): Promise<FormState> {
+  const me = await actor();
+  const f = fileMeta.safeParse(file);
+  const c = sheetCategory.safeParse(category);
+  if (!me || !id.safeParse(projectId).success || !f.success || !c.success) return fail("Cerere invalidă.");
+  if (!/^image\//.test(f.data.type ?? "")) return fail("Doar pozele sunt acceptate.");
+  const db = createUserClient();
+  const { error } = await db.from("project_student_sheet_photos").insert({
+    project_id: projectId,
+    student_id: me.clerkId,
+    category: c.data,
+    name: f.data.name,
+    storage_path: f.data.path,
+  });
+  return error ? fail("Poza nu a putut fi atașată fișei.") : done("Poză atașată.");
+}
+
+export async function deleteStudentSheetPhoto(photoId: string): Promise<FormState> {
+  const me = await actor();
+  if (!me || !id.safeParse(photoId).success) return fail("Cerere invalidă.");
+  const db = createUserClient();
+  const { data } = await db
+    .from("project_student_sheet_photos")
+    .delete()
+    .eq("id", photoId)
+    .select("project_id, storage_path");
+  if (!data?.length) return fail("Nu ai dreptul să ștergi poza.");
+  await removeObject("project-files", data[0].storage_path);
+  return done("Poză ștearsă.");
+}
+
+export async function evaluateStudentSheet(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await actor();
+  const parsed = z.object({
+    projectId: id,
+    studentId: z.string().trim().min(1).max(100),
+    innovation: grade,
+    impact: grade,
+    feedbackScore: grade,
+    efficiency: grade,
+  }).safeParse(Object.fromEntries(formData));
+  if (!me || !isPlatformMentor(me)) return fail("Doar organizatorii PN evaluează fișa.");
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  const f = parsed.data;
+  const { error } = await createUserClient()
+    .from("project_student_sheet_evaluations")
+    .upsert({
+      project_id: f.projectId,
+      student_id: f.studentId,
+      innovation: f.innovation,
+      impact: f.impact,
+      feedback_score: f.feedbackScore,
+      efficiency: f.efficiency,
+      updated_by: me.clerkId,
+    }, { onConflict: "project_id,student_id" });
+  return error ? fail("Evaluarea nu a putut fi salvată.") : done("Evaluare salvată.");
 }
 
 // ---------- reviews & mentor feedback ----------
