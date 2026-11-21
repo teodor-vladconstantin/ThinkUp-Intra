@@ -1,4 +1,4 @@
-import { sendDueReminders } from "@/lib/notify";
+import { sendDueReminders, sendGamificationNotifications } from "@/lib/notify";
 
 // Vercel Cron calls this with `Authorization: Bearer $CRON_SECRET` (see vercel.json).
 export async function GET(request: Request) {
@@ -6,5 +6,7 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
-  return Response.json(await sendDueReminders());
+  const due = await sendDueReminders();
+  const gamification = await sendGamificationNotifications();
+  return Response.json({ ...due, gamification });
 }

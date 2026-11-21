@@ -112,3 +112,132 @@ export async function sendDueReminders() {
   }
   return { checked: tasks?.length ?? 0, sent };
 }
+
+const isoWeekStart = (d = new Date()) => {
+  const ro = new Date(d.toLocaleString("en-US", { timeZone: "Europe/Bucharest" }));
+  ro.setHours(0, 0, 0, 0);
+  ro.setDate(ro.getDate() - ((ro.getDay() + 6) % 7));
+  return ro.toISOString().slice(0, 10);
+};
+
+const gamificationEmail = (title: string, intro: string) => {
+  const origin = process.env.NEXT_PUBLIC_APP_URL;
+  const font = "Inter,Segoe UI,Helvetica,Arial,sans-serif";
+  return `<!doctype html><html lang="ro"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:24px 12px;background:#f8fafc;font-family:${font}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:white;border-radius:12px;border:1px solid #e5e7eb">
+<tr><td style="background:#1a0b2e;padding:14px 28px"><strong style="color:#a78bfa;font-size:20px">ThinkUp Intranet</strong></td></tr>
+<tr><td style="height:4px;background:#7c3aed"></td></tr>
+<tr><td style="padding:28px"><h1 style="margin:0 0 12px;font-size:24px;color:#0f172a">${esc(title)}</h1>
+<p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#334155">${intro}</p>
+<a href="${origin}/platform/leaderboard" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">Deschide clasamentul</a>
+</td></tr></table></td></tr></table></body></html>`;
+};
+
+export async function sendGamificationNotifications() {
+  const db = createAdminClient();
+  const week = isoWeekStart();
+  const sent: Record<"streak_risk" | "new_badge" | "rank_change", number> = {
+    streak_risk: 0,
+    new_badge: 0,
+    rank_change: 0,
+  };
+  const roDay = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Bucharest", weekday: "short" }).format(new Date());
+
+  if (roDay === "Thu" || roDay === "Fri") {
+    const monday = `${week}T00:00:00+03:00`;
+    const { data: ambassadors } = await db
+      .from("ambassadors")
+      .select("profile_id")
+      .eq("active", true)
+      .not("profile_id", "is", null);
+    for (const a of ambassadors ?? []) {
+      if (!a.profile_id) continue;
+      const { data: activity } = await db
+        .from("xp_events")
+        .select("id")
+        .eq("profile_id", a.profile_id)
+        .gte("created_at", monday)
+        .limit(1);
+      if (activity?.length) continue;
+      const { data: claimed } = await db
+        .from("gamification_notification_claims")
+        .upsert({ profile_id: a.profile_id, kind: "streak_risk", week_start: week }, { onConflict: "profile_id,kind,week_start", ignoreDuplicates: true })
+        .select("profile_id");
+      if (!claimed?.length) continue;
+      const { data: p } = await db.from("profiles").select("email").eq("clerk_id", a.profile_id).eq("is_active", true).maybeSingle();
+      const ok = p ? await sendEmail(p.email, "Streak în pericol", gamificationEmail("Streak în pericol", "Săptămâna ta este goală. Fă o activitate pentru a-ți păstra ritmul."), `${a.profile_id}-streak-${week}`) : false;
+      if (!ok) await db.from("gamification_notification_claims").delete().match({ profile_id: a.profile_id, kind: "streak_risk", week_start: week });
+      else sent.streak_risk++;
+    }
+  }
+
+  const { data: badges } = await db
+    .from("user_badges")
+    .select("profile_id,badge_key,earned_at")
+    .gte("earned_at", `${week}T00:00:00+03:00`);
+  for (const badge of badges ?? []) {
+    const { data: claimed } = await db
+      .from("gamification_notification_claims")
+      .upsert({ profile_id: badge.profile_id, kind: "new_badge", week_start: week }, { onConflict: "profile_id,kind,week_start", ignoreDuplicates: true })
+      .select("profile_id");
+    if (!claimed?.length) continue;
+    const { data: p } = await db.from("profiles").select("email").eq("clerk_id", badge.profile_id).eq("is_active", true).maybeSingle();
+    const ok = p ? await sendEmail(p.email, "Ai câștigat un badge nou!", gamificationEmail("Badge nou", `Felicitări! Ai primit badge-ul „${esc(badge.badge_key)}”.`), `${badge.profile_id}-badge-${week}-${badge.badge_key}`) : false;
+    if (!ok) await db.from("gamification_notification_claims").delete().match({ profile_id: badge.profile_id, kind: "new_badge", week_start: week });
+    else sent.new_badge++;
+  }
+
+  // Rank change: compare this week's school rank with the previous snapshot.
+  const previousWeek = new Date(`${week}T12:00:00Z`);
+  previousWeek.setUTCDate(previousWeek.getUTCDate() - 7);
+  const previous = previousWeek.toISOString().slice(0, 10);
+  const { data: ranked } = await db
+    .from("ambassadors")
+    .select("profile_id,schools(name,county_code,county:counties(zone_id))")
+    .eq("active", true)
+    .not("profile_id", "is", null);
+  const { data: events } = await db
+    .from("xp_events")
+    .select("profile_id,xp")
+    .gte("created_at", `${week}T00:00:00+03:00`);
+  const xpByProfile = new Map<string, number>();
+  for (const event of events ?? []) xpByProfile.set(event.profile_id, (xpByProfile.get(event.profile_id) ?? 0) + event.xp);
+  const schoolGroups = new Map<string, { profileId: string; xp: number }[]>();
+  for (const row of ranked ?? []) {
+    const profileId = row.profile_id as string;
+    if (!profileId) continue;
+    const school = (row as any).schools;
+    const schoolName = school?.name ?? "";
+    const group = schoolGroups.get(schoolName) ?? [];
+    group.push({ profileId, xp: xpByProfile.get(profileId) ?? 0 });
+    schoolGroups.set(schoolName, group);
+  }
+  for (const group of schoolGroups.values()) {
+    const ordered = [...group].sort((a, b) => b.xp - a.xp || a.profileId.localeCompare(b.profileId));
+    for (let i = 0; i < ordered.length; i++) {
+      const student = ordered[i];
+      const rank = i + 1;
+      const { data: old } = await db
+        .from("gamification_rank_snapshots")
+        .select("rank")
+        .match({ profile_id: student.profileId, scope: "school", period: "week", snapshot_week: previous })
+        .maybeSingle();
+      await db.from("gamification_rank_snapshots").upsert({
+        profile_id: student.profileId, scope: "school", period: "week", rank, snapshot_week: week,
+      }, { onConflict: "profile_id,scope,period,snapshot_week" });
+      if (!old || old.rank === rank) continue;
+      const { data: claimed } = await db
+        .from("gamification_notification_claims")
+        .upsert({ profile_id: student.profileId, kind: "rank_change", week_start: week }, { onConflict: "profile_id,kind,week_start", ignoreDuplicates: true })
+        .select("profile_id");
+      if (!claimed?.length) continue;
+      const { data: p } = await db.from("profiles").select("email").eq("clerk_id", student.profileId).eq("is_active", true).maybeSingle();
+      const ok = p ? await sendEmail(p.email, "S-a schimbat locul în clasament", gamificationEmail("Schimbare în clasament", `Acum ai locul ${rank} în clasamentul școlii.`), `${student.profileId}-rank-${week}`) : false;
+      if (!ok) await db.from("gamification_notification_claims").delete().match({ profile_id: student.profileId, kind: "rank_change", week_start: week });
+      else sent.rank_change++;
+    }
+  }
+  return sent;
+}
