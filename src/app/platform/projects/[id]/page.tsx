@@ -26,6 +26,10 @@ import {
   setProjectSummary,
   setThumbnail,
   updateProject,
+  saveStudentSheet,
+  addStudentSheetPhoto,
+  deleteStudentSheetPhoto,
+  evaluateStudentSheet,
 } from "../../actions";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +51,31 @@ type Goal = { id: string; name: string; description: string | null; progress: nu
 type Review = { id: string; author_id: string; rating: number; body: string | null; created_at: string };
 type Feedback = { id: string; mentor_id: string; body: string; created_at: string };
 type Grade = { student_id: string; score: number; innovation: number; impact: number; feedback_score: number; efficiency: number; challenge: { name: string } | null };
+type StudentSheet = {
+  project_id: string;
+  student_id: string;
+  student_name: string;
+  school_name: string;
+  zone_county: string;
+  challenge_title: string;
+  activity_date: string;
+  participants_count: number;
+  activity_description: string;
+  special_activity: string;
+  participant_feedback: string;
+  guest_name: string | null;
+  guest_occupation: string | null;
+  guest_reason: string | null;
+  guest_topics: string | null;
+  improvements: string;
+  planning_timeline: string;
+  materials_timeline: string;
+  promotion_timeline: string;
+  activity_timeline: string;
+  feedback_timeline: string;
+};
+type StudentSheetPhoto = { id: string; student_id: string; category: "preparation" | "activity" | "participants"; name: string; storage_path: string };
+type StudentSheetEvaluation = { student_id: string; innovation: number; impact: number; feedback_score: number; efficiency: number };
 
 export default async function ProjectPage(props: PageProps<"/platform/projects/[id]">) {
   const me = await requirePlatformProfile();
@@ -63,7 +92,7 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const project = data as Project;
   const mentor = isPlatformMentor(me);
 
-  const [members, photos, goals, reviews, feedback, challenges, grades, people] = await Promise.all([
+  const [members, photos, goals, reviews, feedback, challenges, grades, people, studentSheets, studentSheetPhotos, studentSheetEvaluations] = await Promise.all([
     db.from("project_members").select("profile_id").eq("project_id", project.id),
     db.from("project_photos").select("id, storage_path").eq("project_id", project.id).order("created_at"),
     db.from("goals").select("id, name, description, progress, deadline").eq("project_id", project.id).order("created_at"),
@@ -73,6 +102,9 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
     // RLS: PN sees every grade, a student only their own.
     db.from("submissions").select("student_id, score, innovation, impact, feedback_score, efficiency, challenge:challenges(name)").eq("project_id", project.id),
     platformPeople(db),
+    db.from("project_student_sheets").select("*").eq("project_id", project.id).order("updated_at", { ascending: false }),
+    db.from("project_student_sheet_photos").select("id, student_id, category, name, storage_path").eq("project_id", project.id).order("created_at"),
+    db.from("project_student_sheet_evaluations").select("student_id, innovation, impact, feedback_score, efficiency").eq("project_id", project.id),
   ]);
 
   const memberIds = (members.data ?? []).map((m) => m.profile_id as string);
@@ -80,7 +112,10 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
   const photoRows = (photos.data ?? []) as { id: string; storage_path: string }[];
   const reviewRows = (reviews.data ?? []) as Review[];
   const challengeRows = (challenges.data ?? []) as { id: string; name: string }[];
-  const urls = await signedUrls(db, "project-files", [project.summary_path ?? "", ...photoRows.map((p) => p.storage_path)]);
+  const sheetRows = (studentSheets.data ?? []) as StudentSheet[];
+  const sheetPhotoRows = (studentSheetPhotos.data ?? []) as StudentSheetPhoto[];
+  const sheetEvaluationRows = (studentSheetEvaluations.data ?? []) as StudentSheetEvaluation[];
+  const urls = await signedUrls(db, "project-files", [project.summary_path ?? "", ...photoRows.map((p) => p.storage_path), ...sheetPhotoRows.map((p) => p.storage_path)]);
   const thumb = project.thumbnail_path ? urls.get(project.thumbnail_path) : undefined;
   const avg = reviewRows.length ? (reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length).toFixed(1) : null;
   const canReview = me.isPeerReviewer && !isMember && project.accept_reviews && !project.archived && !reviewRows.some((r) => r.author_id === me.clerkId);
@@ -198,6 +233,131 @@ export default async function ProjectPage(props: PageProps<"/platform/projects/[
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* ---------- ambassador student activity sheet (replacement for the PDF) ---------- */}
+          <Card data-tour="student-activity-sheet">
+            <CardHeader>
+              <CardTitle>Fișa activității ambasadorului</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(mentor ? memberIds : memberIds.filter((id) => id === me.clerkId)).map((studentId) => {
+                const sheet = sheetRows.find((row) => row.student_id === studentId);
+                const photos = sheetPhotoRows.filter((photo) => photo.student_id === studentId);
+                const evaluation = sheetEvaluationRows.find((row) => row.student_id === studentId);
+                const ownSheet = studentId === me.clerkId;
+                const challengeName = challengeRows.find((challenge) => challenge.id === project.challenge_id)?.name ?? project.name;
+
+                return (
+                  <section key={studentId} className="space-y-4 border-t pt-5 first:border-t-0 first:pt-0">
+                    <h3 className="font-medium">{people.name(studentId)}{ownSheet ? " · fișa mea" : ""}</h3>
+
+                    {ownSheet && (
+                      <ActionForm action={saveStudentSheet} submitLabel="Salvează fișa" keep className="space-y-3">
+                        <input type="hidden" name="projectId" value={project.id} />
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Input name="studentName" required maxLength={200} defaultValue={sheet?.student_name ?? me.fullName ?? ""} aria-label="Nume" placeholder="Nume" />
+                          <Input name="schoolName" required maxLength={200} defaultValue={sheet?.school_name ?? ""} aria-label="Liceu" placeholder="Liceu" />
+                          <Input name="zoneCounty" required maxLength={200} defaultValue={sheet?.zone_county ?? ""} aria-label="Zonă / județ" placeholder="Zonă / județ" />
+                          <Input name="challengeTitle" required maxLength={200} defaultValue={sheet?.challenge_title ?? challengeName} aria-label="Titlu challenge" placeholder="Titlu challenge" />
+                          <Input name="activityDate" type="date" required defaultValue={sheet?.activity_date ?? ""} aria-label="Data activității" />
+                          <Input name="participantsCount" type="number" required min={0} max={100000} defaultValue={sheet?.participants_count ?? 0} aria-label="Număr aproximativ de participanți" placeholder="Număr aproximativ de participanți" />
+                        </div>
+
+                        <label className="grid gap-1 text-sm font-medium">
+                          1. Descrierea activității
+                          <textarea name="activityDescription" required rows={5} maxLength={10000} defaultValue={sheet?.activity_description ?? ""} className={fieldClass} placeholder="Ce tip de activitate a fost, scopul și desfășurarea." />
+                        </label>
+                        <label className="grid gap-1 text-sm font-medium">
+                          2. Ce a avut special activitatea ta?
+                          <textarea name="specialActivity" required rows={4} maxLength={10000} defaultValue={sheet?.special_activity ?? ""} className={fieldClass} placeholder="Idee creativă, metodă interactivă sau implicarea participanților." />
+                        </label>
+                        <label className="grid gap-1 text-sm font-medium">
+                          3. Ce le-a plăcut cel mai mult participanților?
+                          <textarea name="participantFeedback" required rows={5} maxLength={10000} defaultValue={sheet?.participant_feedback ?? ""} className={fieldClass} placeholder="Moment, surpriză, utilitate și impresia generală." />
+                        </label>
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Input name="guestName" maxLength={200} defaultValue={sheet?.guest_name ?? ""} aria-label="Numele invitatului" placeholder="Numele invitatului" />
+                          <Input name="guestOccupation" maxLength={300} defaultValue={sheet?.guest_occupation ?? ""} aria-label="Ce face invitatul" placeholder="Ce face / cu ce se ocupă" />
+                        </div>
+                        <textarea name="guestReason" rows={2} maxLength={2000} defaultValue={sheet?.guest_reason ?? ""} className={fieldClass} aria-label="De ce ați ales invitatul" placeholder="De ce l-ați ales ca invitat?" />
+                        <textarea name="guestTopics" rows={3} maxLength={4000} defaultValue={sheet?.guest_topics ?? ""} className={fieldClass} aria-label="Subiecte discutate" placeholder="Ce subiecte ați discutat împreună?" />
+
+                        <label className="grid gap-1 text-sm font-medium">
+                          5. Ce ai îmbunătăți?
+                          <textarea name="improvements" required rows={4} maxLength={10000} defaultValue={sheet?.improvements ?? ""} className={fieldClass} placeholder="Organizare, timp, activități, participarea elevilor etc." />
+                        </label>
+
+                        <div className="grid gap-2">
+                          <span className="text-sm font-medium">6. Cum s-a desfășurat organizarea (timeline)</span>
+                          <textarea name="planningTimeline" required rows={2} maxLength={4000} defaultValue={sheet?.planning_timeline ?? ""} className={fieldClass} aria-label="Planificarea" placeholder="Planificarea activității" />
+                          <textarea name="materialsTimeline" required rows={2} maxLength={4000} defaultValue={sheet?.materials_timeline ?? ""} className={fieldClass} aria-label="Pregătirea materialelor" placeholder="Pregătirea materialelor" />
+                          <textarea name="promotionTimeline" required rows={2} maxLength={4000} defaultValue={sheet?.promotion_timeline ?? ""} className={fieldClass} aria-label="Promovarea" placeholder="Promovarea activității" />
+                          <textarea name="activityTimeline" required rows={2} maxLength={4000} defaultValue={sheet?.activity_timeline ?? ""} className={fieldClass} aria-label="Desfășurarea" placeholder="Desfășurarea evenimentului" />
+                          <textarea name="feedbackTimeline" required rows={2} maxLength={4000} defaultValue={sheet?.feedback_timeline ?? ""} className={fieldClass} aria-label="Colectarea feedback-ului" placeholder="Colectarea feedback-ului" />
+                        </div>
+                      </ActionForm>
+                    )}
+
+                    {sheet && ownSheet && (
+                      <div className="space-y-4">
+                        {(["preparation", "activity", "participants"] as const).map((category) => {
+                          const label = category === "preparation" ? "Din timpul pregătirii" : category === "activity" ? "Din timpul activității" : "Cu participanții";
+                          return (
+                            <div key={category} className="space-y-2">
+                              <p className="text-sm font-medium">{label}</p>
+                              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                                {photos.filter((photo) => photo.category === category).map((photo) => (
+                                  <div key={photo.id} className="space-y-1">
+                                    {/* eslint-disable-next-line @next/next/no-img-element -- signed Storage URL */}
+                                    <img src={urls.get(photo.storage_path)} alt={photo.name} className="aspect-square w-full rounded-lg object-cover" />
+                                    <ActionButton action={deleteStudentSheetPhoto.bind(null, photo.id)} confirmText="Ștergi poza?">
+                                      Șterge
+                                    </ActionButton>
+                                  </div>
+                                ))}
+                              </div>
+                              <FileUpload
+                                bucket="project-files"
+                                folder={`${project.id}/student-sheets/${studentId}/${category}`}
+                                accept="image/*"
+                                label={`Încarcă: ${label}`}
+                                complete={addStudentSheetPhoto.bind(null, project.id, category)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {sheet && mentor && (
+                      <ActionForm action={evaluateStudentSheet} submitLabel="Salvează evaluarea" keep>
+                        <input type="hidden" name="projectId" value={project.id} />
+                        <input type="hidden" name="studentId" value={studentId} />
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {CRITERIA.map((criterion) => (
+                            <Select
+                              key={criterion.key}
+                              name={criterion.key}
+                              required
+                              aria-label={criterion.label}
+                              defaultValue={String(evaluation?.[criterion.key] ?? 1)}
+                              options={[1, 2, 3, 4, 5].map((value) => ({ value: String(value), label: `${value} — ${criterion.label}` }))}
+                            />
+                          ))}
+                        </div>
+                        {evaluation && (
+                          <p className="text-sm text-muted-foreground">
+                            Scor curent: {evaluation.innovation + evaluation.impact + evaluation.feedback_score + evaluation.efficiency} / {MAX_CHALLENGE_SCORE}
+                          </p>
+                        )}
+                      </ActionForm>
+                    )}
+                  </section>
+                );
+              })}
             </CardContent>
           </Card>
 
