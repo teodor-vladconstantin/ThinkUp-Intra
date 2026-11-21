@@ -1,5 +1,20 @@
 import { expect, test } from "bun:test";
-import { bestStreak, earnedBadges, weeklyStreak } from "./gamification";
+import { XP_DAILY_CAPS, XP_WEIGHTS, bestStreak, earnedBadges, levelForXp, weeklyStreak } from "./gamification";
+
+test("gamification XP weights and daily caps are bounded", () => {
+  expect(XP_WEIGHTS.goal_progress).toBe(10);
+  expect(XP_WEIGHTS.material).toBe(5);
+  expect(XP_WEIGHTS.photo).toBe(5);
+  expect(XP_DAILY_CAPS.goal_progress).toBe(30);
+  expect(XP_DAILY_CAPS.material).toBe(20);
+  expect(XP_DAILY_CAPS.photo).toBe(15);
+});
+
+test("level formula follows 100 * level squared thresholds", () => {
+  expect(levelForXp(0)).toEqual({ level: 1, levelXp: 0, nextLevelXp: 100 });
+  expect(levelForXp(99)).toEqual({ level: 1, levelXp: 0, nextLevelXp: 100 });
+  expect(levelForXp(100)).toEqual({ level: 2, levelXp: 100, nextLevelXp: 400 });
+});
 
 // Mondays: Sep 7, 14, 21, 28 and Oct 5, 12 of 2026.
 test("no activity, no streak", () => {

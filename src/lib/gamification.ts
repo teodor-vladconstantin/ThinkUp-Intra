@@ -1,5 +1,23 @@
 // Weekly streak + badges. Pure: no DB, no server-only. Weeks are Monday dates, "YYYY-MM-DD".
 
+export const XP_WEIGHTS = {
+  goal_progress: 10,
+  material: 5,
+  photo: 5,
+} as const;
+
+export const XP_DAILY_CAPS = {
+  goal_progress: 30,
+  material: 20,
+  photo: 15,
+} as const;
+
+export const levelForXp = (xp: number) => ({
+  level: Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1),
+  levelXp: (Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1) - 1) ** 2 * 100,
+  nextLevelXp: (Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1) ** 2) * 100,
+});
+
 const DAY = 86_400_000;
 const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const addDays = (d: string, n: number) => ymd(Date.parse(d) + n * DAY);
